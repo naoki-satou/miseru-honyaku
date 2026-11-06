@@ -1,0 +1,1270 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="color-scheme" content="dark" />
+    <link rel="icon" href="data:," />
+    <title>見せる翻訳（試作）</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700;900&display=swap" rel="stylesheet" />
+    <style>
+      :root {
+        --bg: #0a0c0f;
+        --panel: #151920;
+        --panel-2: #1d232d;
+        --line: #2a313d;
+        --text: #f4f6f9;
+        --sub: #b6bfcb;
+        --dim: #79838f;
+        --accent: #f0a51e;
+        --accent-text: #1a1200;
+        --danger: #ff8a7a;
+      }
+      * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+      html, body { height: 100%; }
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--text);
+        font-family: "Noto Sans JP", "Hiragino Kaku Gothic ProN", "Yu Gothic", sans-serif;
+        -webkit-font-smoothing: antialiased;
+      }
+      button { font-family: inherit; cursor: pointer; }
+      button:focus-visible, [tabindex]:focus-visible {
+        outline: 2px solid var(--accent);
+        outline-offset: 2px;
+      }
+      @media (prefers-reduced-motion: reduce) {
+        *, *::before, *::after { animation: none !important; transition: none !important; }
+      }
+
+      /* ---------- 入力画面 ---------- */
+      .input-view {
+        max-width: 640px;
+        margin: 0 auto;
+        padding: 0 18px 84px;
+        display: block;
+        min-height: 100dvh;
+      }
+
+      /* ---------- 上部の操作ボタン ---------- */
+      /* キーボード表示時やスクロール時も常に画面上部に残るよう固定する。
+         sticky は通常フローにも場所を取るため、下の内容が隠れない。 */
+      .controls-top {
+        position: sticky;
+        top: 0;
+        z-index: 50;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        background: var(--bg);
+        margin: 0 -18px 14px;
+        padding: calc(14px + env(safe-area-inset-top, 0px)) 18px 10px;
+        box-shadow: 0 12px 14px -12px rgba(0, 0, 0, 0.85);
+      }
+      .top-meta {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+        min-height: 22px;
+      }
+      .pair-indicator {
+        font-size: 11px;
+        font-weight: 700;
+        color: var(--dim);
+        line-height: 1.5;
+      }
+      .foreign-row {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+      .foreign-btn {
+        flex: 1;
+        min-height: 48px;
+        padding: 8px 6px;
+        font-size: 15px;
+        line-height: 1.35;
+        font-weight: 700;
+        color: var(--sub);
+        background: var(--panel);
+        border: 2px solid var(--line);
+        border-radius: 10px;
+      }
+      .foreign-btn.active {
+        color: var(--text);
+        border-color: var(--accent);
+        background: var(--panel-2);
+      }
+      .dir-btn {
+        width: 100%;
+        min-height: 56px;
+        padding: 10px 12px;
+        font-size: 17px;
+        line-height: 1.35;
+        font-weight: 900;
+        color: var(--text);
+        background: var(--panel-2);
+        border: 2px solid var(--line);
+        border-radius: 12px;
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        text-align: center;
+      }
+      .dir-btn .swap {
+        color: var(--accent);
+        font-size: 22px;
+        line-height: 1;
+      }
+      .dir-btn:active { background: var(--panel); }
+
+      /* ---------- 入力欄 ---------- */
+      .field-wrap { position: relative; margin-bottom: 14px; }
+      textarea {
+        width: 100%;
+        min-height: 110px;
+        padding: 16px 52px 16px 16px;
+        font-size: 22px;
+        line-height: 1.5;
+        color: var(--text);
+        background: var(--panel);
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        resize: vertical;
+        font-family: inherit;
+      }
+      textarea:focus { outline: none; border-color: var(--accent); }
+      textarea::placeholder { color: var(--dim); font-size: 19px; }
+      .clear-input {
+        position: absolute;
+        top: 8px;
+        right: 8px;
+        width: 40px;
+        height: 40px;
+        display: none;
+        align-items: center;
+        justify-content: center;
+        font-size: 20px;
+        line-height: 1;
+        color: var(--sub);
+        background: var(--panel-2);
+        border: 1px solid var(--line);
+        border-radius: 50%;
+        padding: 0;
+      }
+      .clear-input.show { display: flex; }
+      .clear-input:active { color: var(--text); background: var(--line); }
+      .counter {
+        text-align: right;
+        font-size: 12px;
+        color: var(--dim);
+        margin-top: 5px;
+        font-variant-numeric: tabular-nums;
+      }
+      .counter.over { color: var(--danger); font-weight: 700; }
+
+      /* ---------- 訳文表示エリア（主役） ---------- */
+      .result-area {
+        background: var(--panel);
+        border: 1px solid var(--line);
+        border-radius: 18px;
+        padding: 22px 18px 16px;
+        margin-bottom: 14px;
+        min-height: 180px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+        gap: 8px;
+        transition: border-color 0.25s ease, background 0.25s ease;
+      }
+      .result-area.has-result {
+        cursor: pointer;
+        border-color: rgba(240, 165, 30, 0.45);
+        background: var(--panel-2);
+      }
+      .result-area.has-result:active { background: #232a35; }
+      .result-dir {
+        font-size: 12px;
+        font-weight: 700;
+        color: var(--dim);
+        letter-spacing: 0.06em;
+      }
+      .result-area.has-result .result-dir { color: var(--accent); }
+      .result-text {
+        font-weight: 900;
+        line-height: 1.4;
+        word-break: break-word;
+        overflow-wrap: anywhere;
+        white-space: pre-wrap;
+        color: var(--text);
+        width: 100%;
+      }
+      .result-text.is-placeholder {
+        font-weight: 500;
+        font-size: 16px !important;
+        line-height: 1.6;
+        color: var(--dim);
+      }
+      .result-sub {
+        font-size: 14px;
+        line-height: 1.5;
+        color: var(--dim);
+      }
+      .result-sub:empty { display: none; }
+      .result-status {
+        font-size: 13px;
+        font-weight: 500;
+        color: var(--dim);
+        min-height: 18px;
+        display: flex;
+        align-items: center;
+        gap: 7px;
+      }
+      .result-status .dot {
+        width: 7px;
+        height: 7px;
+        border-radius: 50%;
+        background: var(--accent);
+        animation: pulse 1.1s ease-in-out infinite;
+        flex: none;
+      }
+      @keyframes pulse {
+        0%, 100% { opacity: 0.25; }
+        50% { opacity: 1; }
+      }
+      .result-hint {
+        font-size: 12px;
+        line-height: 1.6;
+        color: var(--dim);
+      }
+      .result-hint .h-foreign { display: block; }
+      .status {
+        display: none;
+        margin-bottom: 14px;
+        padding: 14px 16px;
+        font-size: 16px;
+        font-weight: 700;
+        line-height: 1.6;
+        border-radius: 12px;
+        background: #2e1a15;
+        color: #f3cdc4;
+        border: 1px solid #5c2f24;
+      }
+      .status.show { display: block; }
+
+      /* ---------- 下部の折りたたみ（履歴・Gemini） ---------- */
+      .folds {
+        border-top: 1px solid var(--line);
+        margin-top: 2px;
+      }
+      .fold-toggle {
+        width: 100%;
+        display: flex;
+        align-items: baseline;
+        justify-content: space-between;
+        gap: 10px;
+        text-align: left;
+        font-size: 14px;
+        font-weight: 700;
+        color: var(--sub);
+        background: none;
+        border: none;
+        border-bottom: 1px solid var(--line);
+        padding: 14px 2px;
+      }
+      .fold-toggle .f-foreign {
+        font-size: 12px;
+        font-weight: 500;
+        color: var(--dim);
+      }
+      .fold-toggle .f-arrow { color: var(--dim); font-weight: 500; }
+      .fold-panel { display: none; padding: 12px 0 16px; }
+      .fold-panel.open { display: block; }
+
+      /* ---------- Gemini連携 ---------- */
+      .gemini-badge {
+        display: none;
+        font-size: 12px;
+        font-weight: 700;
+        color: var(--accent);
+        background: var(--panel-2);
+        border: 1px solid var(--accent);
+        border-radius: 999px;
+        padding: 4px 10px;
+      }
+      .gemini-badge.show { display: inline-block; }
+      .fallback-btn {
+        display: block;
+        width: 100%;
+        margin-top: 10px;
+        min-height: 52px;
+        font-size: 17px;
+        font-weight: 900;
+        color: var(--accent-text);
+        background: var(--accent);
+        border: none;
+        border-radius: 10px;
+      }
+      .fallback-btn:active { filter: brightness(0.92); }
+      .gemini-panel p {
+        margin: 0 0 10px;
+        font-size: 14px;
+        line-height: 1.6;
+        color: var(--sub);
+      }
+      .gemini-panel p strong { color: var(--text); }
+      .gemini-panel p .g-foreign {
+        display: block;
+        font-size: 13px;
+        color: var(--dim);
+        margin-top: 2px;
+      }
+      .gemini-key {
+        width: 100%;
+        padding: 12px 14px;
+        font-size: 16px;
+        color: var(--text);
+        background: var(--panel-2);
+        border: 2px solid var(--line);
+        border-radius: 10px;
+        font-family: inherit;
+      }
+      .gemini-key:focus { outline: none; border-color: var(--accent); }
+      .gemini-btns { display: flex; gap: 8px; margin-top: 10px; }
+      .gemini-save {
+        flex: 1;
+        min-height: 48px;
+        font-size: 16px;
+        font-weight: 900;
+        color: var(--accent-text);
+        background: var(--accent);
+        border: none;
+        border-radius: 10px;
+      }
+      .gemini-save:active { filter: brightness(0.92); }
+      .gemini-delete {
+        min-height: 48px;
+        padding: 0 16px;
+        font-size: 15px;
+        font-weight: 700;
+        color: var(--danger);
+        background: none;
+        border: 2px solid var(--line);
+        border-radius: 10px;
+      }
+      .gemini-msg {
+        display: none;
+        margin-top: 10px;
+        font-size: 14px;
+        font-weight: 700;
+        color: var(--accent);
+      }
+      .gemini-msg.show { display: block; }
+
+      /* ---------- 履歴 ---------- */
+      .history-head {
+        display: flex;
+        align-items: baseline;
+        justify-content: space-between;
+        gap: 10px;
+        margin-bottom: 8px;
+      }
+      .history-note {
+        font-size: 12px;
+        color: var(--dim);
+        line-height: 1.5;
+      }
+      .history-clear {
+        flex: none;
+        font-size: 13px;
+        color: var(--sub);
+        background: none;
+        border: none;
+        text-decoration: underline;
+        padding: 4px;
+        text-align: right;
+      }
+      .history-clear .clear-foreign {
+        display: block;
+        font-size: 11px;
+        font-weight: 500;
+        color: var(--dim);
+      }
+      .history-item {
+        width: 100%;
+        text-align: left;
+        display: block;
+        padding: 12px 14px;
+        margin-bottom: 8px;
+        background: var(--panel);
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        color: var(--text);
+      }
+      .history-item:active { background: var(--panel-2); }
+      .history-item .h-dir {
+        font-size: 12px;
+        font-weight: 700;
+        color: var(--accent);
+        margin-bottom: 4px;
+      }
+      .history-item .h-out {
+        font-size: 18px;
+        font-weight: 700;
+        line-height: 1.4;
+        word-break: break-word;
+      }
+      .history-item .h-in {
+        font-size: 13px;
+        color: var(--sub);
+        margin-top: 3px;
+        line-height: 1.4;
+        word-break: break-word;
+      }
+      .history-empty { font-size: 14px; color: var(--dim); padding: 6px 2px; line-height: 1.6; }
+
+      /* ---------- 注意書き ---------- */
+      .note {
+        position: fixed;
+        left: 0; right: 0; bottom: 0;
+        padding: 8px 14px calc(8px + env(safe-area-inset-bottom));
+        font-size: 12px;
+        line-height: 1.55;
+        color: var(--sub);
+        background: rgba(10, 12, 15, 0.94);
+        text-align: center;
+        z-index: 30;
+      }
+      .note .n-foreign { display: block; color: var(--dim); }
+
+      /* ---------- 表示画面 ---------- */
+      .show-view {
+        position: fixed;
+        inset: 0;
+        background: var(--bg);
+        z-index: 20;
+        display: none;
+        flex-direction: column;
+        padding: 30px 24px calc(22px + env(safe-area-inset-bottom));
+      }
+      .show-view.open { display: flex; }
+      .show-dir {
+        font-size: 14px;
+        font-weight: 700;
+        color: var(--accent);
+        letter-spacing: 0.04em;
+        text-align: center;
+        margin-bottom: 12px;
+      }
+      .show-text {
+        flex: 1;
+        min-height: 0;
+        overflow-y: auto;
+        display: flex;
+        padding: 8px 0;
+      }
+      .show-text > span {
+        margin: auto;
+        text-align: center;
+        font-weight: 900;
+        line-height: 1.45;
+        word-break: break-word;
+        overflow-wrap: anywhere;
+        white-space: pre-wrap;
+      }
+      .show-src {
+        border-top: 1px solid var(--line);
+        padding-top: 14px;
+        font-size: 15px;
+        color: var(--sub);
+        line-height: 1.6;
+        word-break: break-word;
+        overflow-wrap: anywhere;
+        max-height: 20dvh;
+        overflow-y: auto;
+      }
+      .show-src .src-label { font-size: 12px; font-weight: 700; color: var(--dim); display: block; margin-bottom: 4px; }
+      .show-back {
+        margin: 16px auto 0;
+        text-align: center;
+        font-size: 13px;
+        line-height: 1.6;
+        color: var(--sub);
+        border: 1px solid var(--line);
+        border-radius: 999px;
+        padding: 7px 18px;
+      }
+      .show-back .b-foreign { display: block; color: var(--dim); }
+    </style>
+  </head>
+  <body>
+
+    <!-- 入力画面 -->
+    <main class="input-view" id="inputView">
+
+      <!-- 一番上：操作ボタン -->
+      <div class="controls-top">
+        <div class="top-meta">
+          <span class="pair-indicator" id="pairIndicator">タガログ語 Tagalog ＋ 英語 English</span>
+          <span class="gemini-badge" id="geminiBadge">Gemini連携中</span>
+        </div>
+        <div class="foreign-row" role="group" aria-label="外国語側の切替">
+          <button type="button" class="foreign-btn active" id="foreignLocalBtn" aria-pressed="true">タガログ語 Tagalog</button>
+          <button type="button" class="foreign-btn" id="foreignEnBtn" aria-pressed="false">英語 English</button>
+        </div>
+        <button class="dir-btn" id="dirBtn" type="button" aria-label="翻訳の方向を切り替える">
+          <span id="dirFrom">日本語 Japanese</span>
+          <span class="swap" aria-hidden="true">⇄</span>
+          <span id="dirTo">タガログ語 Tagalog</span>
+        </button>
+      </div>
+
+      <!-- 訳文表示エリア（タップで全画面表示） -->
+      <div class="result-area" id="resultArea" role="button" tabindex="0" aria-label="訳文。タップで大きく表示">
+        <div class="result-dir" id="resultDir">日本語 → タガログ語</div>
+        <div class="result-text is-placeholder" id="resultText">言葉を打つと、ここに訳が出ます</div>
+        <div class="result-sub" id="resultSub"></div>
+        <div class="result-status" id="resultStatus" aria-live="polite"></div>
+        <div class="result-hint" id="resultHint" style="display:none"><span>タップで大きく表示</span><span class="h-foreign" id="resultHintForeign"></span></div>
+      </div>
+
+      <div class="field-wrap">
+        <textarea id="input" maxlength="200" rows="4" lang="ja" autocapitalize="off" autocomplete="off" spellcheck="false" placeholder="ここに入力してください"></textarea>
+        <button class="clear-input" id="clearInput" type="button" aria-label="入力を消す">×</button>
+        <div class="counter" id="counter">0 / 200</div>
+      </div>
+
+      <div class="status" id="status" role="alert">
+        <span id="statusText"></span>
+        <button class="fallback-btn" id="fallbackBtn" type="button" style="display:none">フリー版で翻訳する</button>
+      </div>
+
+      <!-- 下部：折りたたみ（履歴・Gemini連携） -->
+      <div class="folds">
+        <button class="fold-toggle" id="historyToggle" type="button" aria-expanded="false">
+          <span>履歴<span class="f-foreign" id="historyToggleForeign"></span></span>
+          <span class="f-arrow" aria-hidden="true">▽</span>
+        </button>
+        <section class="fold-panel" id="historyPanel" aria-label="履歴">
+          <div class="history-head">
+            <span class="history-note"><span>この端末の中だけに残ります</span><br /><span id="historyNoteForeign"></span></span>
+            <button class="history-clear" id="clearBtn" type="button"><span>履歴を消す</span><span class="clear-foreign" id="clearForeign"></span></button>
+          </div>
+          <div id="historyList"></div>
+        </section>
+
+        <button class="fold-toggle" id="geminiToggle" type="button" aria-expanded="false">
+          <span>Gemini連携（任意）<span class="f-foreign" id="geminiToggleForeign"></span></span>
+          <span class="f-arrow" aria-hidden="true">▽</span>
+        </button>
+        <section class="fold-panel gemini-panel" id="geminiPanel" aria-label="Gemini連携">
+          <p>自分のキーを入れると、<strong>普段の話し方に近い自然な訳</strong>になります。<span class="g-foreign" id="geminiDesc1Foreign"></span></p>
+          <p>キーはこの端末の中にだけ保存されます。<span class="g-foreign" id="geminiDesc2Foreign"></span></p>
+          <p>キーはGoogle AI Studioで無料で取れます。<span class="g-foreign" id="geminiDesc3Foreign"></span></p>
+          <input class="gemini-key" id="geminiKey" type="password" placeholder="Gemini APIキー" autocomplete="off" autocapitalize="off" spellcheck="false" />
+          <div class="gemini-btns">
+            <button class="gemini-save" id="geminiSave" type="button">保存する</button>
+            <button class="gemini-delete" id="geminiDelete" type="button">削除する</button>
+          </div>
+          <div class="gemini-msg" id="geminiMsg"></div>
+        </section>
+      </div>
+    </main>
+
+    <!-- 表示画面 -->
+    <div class="show-view" id="showView" role="button" aria-label="タップで入力画面に戻る">
+      <div class="show-dir" id="showDir"></div>
+      <div class="show-text"><span id="showText"></span></div>
+      <div class="show-src">
+        <span class="src-label"><span>原文</span> / <span id="showSrcLabelForeign">Original</span></span>
+        <span id="showSrc"></span>
+      </div>
+      <div class="show-back"><span>タップで戻る</span><span class="b-foreign" id="showBackForeign"></span></div>
+    </div>
+
+    <div class="note"><span>機械翻訳です。正確でないことがあります</span><span class="n-foreign" id="noteForeign"></span></div>
+
+    <script>
+      (function () {
+        var LANGS = {
+          ja: { name: "日本語", foreign: "Japanese" },
+          tl: { name: "タガログ語", foreign: "Tagalog" },
+          id: { name: "インドネシア語", foreign: "Bahasa Indonesia" },
+          vi: { name: "ベトナム語", foreign: "Tiếng Việt" },
+          en: { name: "英語", foreign: "English" }
+        };
+        // 説明文の外国語側（短く簡単な言葉）。表示は日本語との併記で、切替は現地語／英語切替に連動する。
+        var STR = {
+          tl: {
+            placeholder: "Mag-type dito",
+            resultPlaceholder: "Mag-type, lalabas dito ang salin",
+            tapLarge: "I-tap para lakihan",
+            tapBack: "I-tap para bumalik",
+            history: "Kasaysayan",
+            historyNote: "Sa device lang ito naka-save",
+            clearHistory: "Burahin",
+            gemini: "Gemini (opsyonal)",
+            geminiDesc1: "Gamit ang iyong key, mas natural ang salin, parang normal na usapan.",
+            geminiDesc2: "Sa device lang naka-save ang key.",
+            geminiDesc3: "Libre ang key sa Google AI Studio.",
+            original: "Orihinal",
+            note: "Machine translation ito. Baka hindi tama.",
+            translating: "Nagsasalin…",
+            emptyHistory: "Wala pang kasaysayan."
+          },
+          id: {
+            placeholder: "Ketik di sini",
+            resultPlaceholder: "Ketik, terjemahan muncul di sini",
+            tapLarge: "Ketuk untuk perbesar",
+            tapBack: "Ketuk untuk kembali",
+            history: "Riwayat",
+            historyNote: "Hanya tersimpan di perangkat ini",
+            clearHistory: "Hapus",
+            gemini: "Gemini (opsional)",
+            geminiDesc1: "Dengan kunci Anda, terjemahan lebih alami, seperti percakapan sehari-hari.",
+            geminiDesc2: "Kunci hanya disimpan di perangkat ini.",
+            geminiDesc3: "Kunci gratis di Google AI Studio.",
+            original: "Teks asli",
+            note: "Terjemahan mesin. Mungkin tidak tepat.",
+            translating: "Menerjemahkan…",
+            emptyHistory: "Belum ada riwayat."
+          },
+          vi: {
+            placeholder: "Nhập ở đây",
+            resultPlaceholder: "Nhập chữ, bản dịch sẽ hiện ở đây",
+            tapLarge: "Chạm để xem lớn",
+            tapBack: "Chạm để quay lại",
+            history: "Lịch sử",
+            historyNote: "Chỉ lưu trên máy này",
+            clearHistory: "Xóa",
+            gemini: "Gemini (tùy chọn)",
+            geminiDesc1: "Dùng khóa của bạn, bản dịch tự nhiên hơn, như nói chuyện hằng ngày.",
+            geminiDesc2: "Khóa chỉ lưu trên máy này.",
+            geminiDesc3: "Khóa miễn phí tại Google AI Studio.",
+            original: "Văn bản gốc",
+            note: "Dịch máy. Có thể không đúng.",
+            translating: "Đang dịch…",
+            emptyHistory: "Chưa có lịch sử."
+          },
+          en: {
+            placeholder: "Type here",
+            resultPlaceholder: "Type, and the translation appears here",
+            tapLarge: "Tap to enlarge",
+            tapBack: "Tap to go back",
+            history: "History",
+            historyNote: "Saved on this device only",
+            clearHistory: "Clear",
+            gemini: "Gemini (optional)",
+            geminiDesc1: "With your key, translations sound more natural, like everyday speech.",
+            geminiDesc2: "The key is saved only on this device.",
+            geminiDesc3: "Get a free key at Google AI Studio.",
+            original: "Original",
+            note: "Machine translation. It may not be correct.",
+            translating: "Translating…",
+            emptyHistory: "No history yet."
+          }
+        };
+        var HISTORY_KEY = "miseru-honyaku-history";
+        var GEMINI_KEY_STORAGE = "miseru-honyaku-gemini-key";
+        var GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent";
+        var MAX_LEN = 200;
+        var HISTORY_MAX = 30;
+
+        // URLパラメータ ?pair=tl など（ペアの指定）。なければタガログ語＋英語ペア。
+        var params = new URLSearchParams(location.search);
+        var pair = params.get("pair");
+        if (!pair || !LANGS[pair] || pair === "en" || pair === "ja") pair = "tl";
+
+        // 外国語側：false = 現地語（ペアの言語） / true = 英語
+        var useEnglish = false;
+
+        var dirJaFirst = true; // true: 日本語→相手 / false: 相手→日本語
+
+        var pairIndicator = document.getElementById("pairIndicator");
+        var foreignLocalBtn = document.getElementById("foreignLocalBtn");
+        var foreignEnBtn = document.getElementById("foreignEnBtn");
+        var dirBtn = document.getElementById("dirBtn");
+        var dirFrom = document.getElementById("dirFrom");
+        var dirTo = document.getElementById("dirTo");
+        var input = document.getElementById("input");
+        var clearInputBtn = document.getElementById("clearInput");
+        var counter = document.getElementById("counter");
+        var resultArea = document.getElementById("resultArea");
+        var resultDir = document.getElementById("resultDir");
+        var resultText = document.getElementById("resultText");
+        var resultSub = document.getElementById("resultSub");
+        var resultStatus = document.getElementById("resultStatus");
+        var resultHint = document.getElementById("resultHint");
+        var resultHintForeign = document.getElementById("resultHintForeign");
+        var statusBox = document.getElementById("status");
+        var statusText = document.getElementById("statusText");
+        var fallbackBtn = document.getElementById("fallbackBtn");
+        var geminiBadge = document.getElementById("geminiBadge");
+        var geminiToggle = document.getElementById("geminiToggle");
+        var geminiPanel = document.getElementById("geminiPanel");
+        var geminiKeyInput = document.getElementById("geminiKey");
+        var geminiSave = document.getElementById("geminiSave");
+        var geminiDelete = document.getElementById("geminiDelete");
+        var geminiMsg = document.getElementById("geminiMsg");
+        var geminiToggleForeign = document.getElementById("geminiToggleForeign");
+        var geminiDesc1Foreign = document.getElementById("geminiDesc1Foreign");
+        var geminiDesc2Foreign = document.getElementById("geminiDesc2Foreign");
+        var geminiDesc3Foreign = document.getElementById("geminiDesc3Foreign");
+        var clearForeign = document.getElementById("clearForeign");
+        var historyToggle = document.getElementById("historyToggle");
+        var historyPanel = document.getElementById("historyPanel");
+        var historyToggleForeign = document.getElementById("historyToggleForeign");
+        var historyNoteForeign = document.getElementById("historyNoteForeign");
+        var historyList = document.getElementById("historyList");
+        var clearBtn = document.getElementById("clearBtn");
+        var showView = document.getElementById("showView");
+        var showDir = document.getElementById("showDir");
+        var showText = document.getElementById("showText");
+        var showSrc = document.getElementById("showSrc");
+        var showSrcLabelForeign = document.getElementById("showSrcLabelForeign");
+        var showBackForeign = document.getElementById("showBackForeign");
+        var noteForeign = document.getElementById("noteForeign");
+
+        // ペアはURLパラメータだけで決まる。画面には今のペアを小さく表示するだけ（押しても切り替わらない）。
+        // 相手も読む場所なので、日本語名と相手側の表記を併記する。
+        pairIndicator.textContent = LANGS[pair].name + " " + LANGS[pair].foreign + " ＋ " + LANGS.en.name + " " + LANGS.en.foreign;
+
+        // 外国語側の切替（現地語 ⇄ 英語）。入力・表示の両方がこの切替に従う。
+        function foreignCode() {
+          return useEnglish ? "en" : pair;
+        }
+        function uiStrings() {
+          return STR[foreignCode()];
+        }
+        // 説明文の外国語側を、今の外国語（現地語／英語）に合わせて差し替える
+        function refreshBilingual() {
+          var s = uiStrings();
+          resultHintForeign.textContent = s.tapLarge;
+          historyToggleForeign.textContent = " / " + s.history;
+          historyNoteForeign.textContent = s.historyNote;
+          clearForeign.textContent = s.clearHistory;
+          geminiToggleForeign.textContent = " / " + s.gemini;
+          geminiDesc1Foreign.textContent = s.geminiDesc1;
+          geminiDesc2Foreign.textContent = s.geminiDesc2;
+          geminiDesc3Foreign.textContent = s.geminiDesc3;
+          showSrcLabelForeign.textContent = s.original;
+          showBackForeign.textContent = s.tapBack;
+          noteForeign.textContent = s.note;
+          if (resultText.classList.contains("is-placeholder")) {
+            resultSub.textContent = s.resultPlaceholder;
+          }
+        }
+        function syncForeignToggle() {
+          foreignLocalBtn.textContent = LANGS[pair].name + " " + LANGS[pair].foreign;
+          foreignLocalBtn.classList.toggle("active", !useEnglish);
+          foreignLocalBtn.setAttribute("aria-pressed", useEnglish ? "false" : "true");
+          foreignEnBtn.textContent = LANGS.en.name + " " + LANGS.en.foreign;
+          foreignEnBtn.classList.toggle("active", useEnglish);
+          foreignEnBtn.setAttribute("aria-pressed", useEnglish ? "true" : "false");
+        }
+        foreignLocalBtn.addEventListener("click", function () {
+          if (!useEnglish) return;
+          useEnglish = false;
+          syncForeignToggle();
+          refreshDir();
+          scheduleTranslate();
+        });
+        foreignEnBtn.addEventListener("click", function () {
+          if (useEnglish) return;
+          useEnglish = true;
+          syncForeignToggle();
+          refreshDir();
+          scheduleTranslate();
+        });
+        syncForeignToggle();
+
+        function langPairCodes() {
+          var f = foreignCode();
+          return dirJaFirst ? ["ja", f] : [f, "ja"];
+        }
+        function langName(code) {
+          return code === "ja" ? "日本語" : LANGS[code].name;
+        }
+        // 上部の方向ボタン用：日本語名と相手側の表記を並べ、どちらの言葉でも向きが分かるようにする
+        function langNameBi(code) {
+          return LANGS[code].name + " " + LANGS[code].foreign;
+        }
+        function refreshDir() {
+          var c = langPairCodes();
+          dirFrom.textContent = langNameBi(c[0]);
+          dirTo.textContent = langNameBi(c[1]);
+          resultDir.textContent = langName(c[0]) + " → " + langName(c[1]);
+          // 入力欄の案内は日本語＋外国語の併記
+          input.placeholder = langName(c[0]) + "で入力してください / " + uiStrings().placeholder;
+          // 入力欄の言語を入力側に合わせる（端末キーボードの変換・予測のため）
+          input.setAttribute("lang", c[0]);
+          refreshBilingual();
+          renderHistory();
+        }
+        dirBtn.addEventListener("click", function () {
+          dirJaFirst = !dirJaFirst;
+          refreshDir();
+          scheduleTranslate();
+        });
+
+        // 文字数カウンタ＋消去ボタン
+        function refreshCounter() {
+          var n = input.value.length;
+          counter.textContent = n + " / " + MAX_LEN;
+          counter.classList.toggle("over", n >= MAX_LEN);
+          clearInputBtn.classList.toggle("show", n > 0);
+        }
+        input.addEventListener("input", function () {
+          refreshCounter();
+          scheduleTranslate();
+        });
+        clearInputBtn.addEventListener("click", function () {
+          input.value = "";
+          refreshCounter();
+          scheduleTranslate();
+          input.focus();
+        });
+
+        function showStatus(msg, canFallback) {
+          statusText.textContent = msg;
+          fallbackBtn.style.display = canFallback ? "" : "none";
+          statusBox.classList.add("show");
+        }
+        function hideStatus() {
+          statusBox.classList.remove("show");
+          statusText.textContent = "";
+          fallbackBtn.style.display = "none";
+        }
+
+        // ---------- 折りたたみ（履歴） ----------
+        historyToggle.addEventListener("click", function () {
+          var open = historyPanel.classList.toggle("open");
+          historyToggle.setAttribute("aria-expanded", open ? "true" : "false");
+          historyToggle.querySelector(".f-arrow").textContent = open ? "△" : "▽";
+        });
+
+        // ---------- Gemini連携（キーはlocalStorage・端末内のみ） ----------
+        function getGeminiKey() {
+          try {
+            return localStorage.getItem(GEMINI_KEY_STORAGE) || "";
+          } catch (e) {
+            return "";
+          }
+        }
+        function refreshGeminiUI() {
+          var has = !!getGeminiKey();
+          geminiBadge.classList.toggle("show", has);
+          geminiDelete.style.display = has ? "" : "none";
+          geminiMsg.textContent = has ? "連携中です。翻訳はGeminiで行います。" : "";
+          geminiMsg.classList.toggle("show", has);
+        }
+        geminiToggle.addEventListener("click", function () {
+          var open = geminiPanel.classList.toggle("open");
+          geminiToggle.setAttribute("aria-expanded", open ? "true" : "false");
+          geminiToggle.querySelector(".f-arrow").textContent = open ? "△" : "▽";
+        });
+        geminiSave.addEventListener("click", function () {
+          var key = geminiKeyInput.value.trim();
+          if (!key) {
+            geminiMsg.textContent = "キーを入力してください。";
+            geminiMsg.classList.add("show");
+            return;
+          }
+          try {
+            localStorage.setItem(GEMINI_KEY_STORAGE, key);
+          } catch (e) {
+            geminiMsg.textContent = "保存できませんでした。";
+            geminiMsg.classList.add("show");
+            return;
+          }
+          geminiKeyInput.value = "";
+          refreshGeminiUI();
+          geminiMsg.textContent = "保存しました。連携中です。";
+          geminiMsg.classList.add("show");
+          if (typeof scheduleTranslate === "function") scheduleTranslate();
+        });
+        geminiDelete.addEventListener("click", function () {
+          try {
+            localStorage.removeItem(GEMINI_KEY_STORAGE);
+          } catch (e) { /* 削除できない環境では何もしない */ }
+          geminiKeyInput.value = "";
+          refreshGeminiUI();
+          geminiMsg.textContent = "削除しました。フリー版で翻訳します。";
+          geminiMsg.classList.add("show");
+          if (typeof scheduleTranslate === "function") scheduleTranslate();
+        });
+
+        // ---------- 履歴（localStorage・端末内のみ） ----------
+        function loadHistory() {
+          try {
+            var raw = localStorage.getItem(HISTORY_KEY);
+            var arr = raw ? JSON.parse(raw) : [];
+            return Array.isArray(arr) ? arr : [];
+          } catch (e) {
+            return [];
+          }
+        }
+        function saveHistory(arr) {
+          try {
+            localStorage.setItem(HISTORY_KEY, JSON.stringify(arr));
+          } catch (e) { /* 保存できない環境では履歴なしで動く */ }
+        }
+        function addHistory(entry) {
+          var arr = loadHistory();
+          var top = arr[0];
+          if (top && top.from === entry.from && top.to === entry.to && top.text === entry.text && top.translated === entry.translated) {
+            return;
+          }
+          arr.unshift(entry);
+          if (arr.length > HISTORY_MAX) arr = arr.slice(0, HISTORY_MAX);
+          saveHistory(arr);
+          renderHistory();
+        }
+        function renderHistory() {
+          var arr = loadHistory();
+          historyList.innerHTML = "";
+          clearBtn.style.display = arr.length ? "" : "none";
+          if (!arr.length) {
+            var empty = document.createElement("div");
+            empty.className = "history-empty";
+            empty.textContent = "まだ履歴はありません。 / " + uiStrings().emptyHistory;
+            historyList.appendChild(empty);
+            return;
+          }
+          arr.forEach(function (entry) {
+            var b = document.createElement("button");
+            b.type = "button";
+            b.className = "history-item";
+            var d = document.createElement("div");
+            d.className = "h-dir";
+            d.textContent = langName(entry.from) + " → " + langName(entry.to);
+            var o = document.createElement("div");
+            o.className = "h-out";
+            o.textContent = entry.translated;
+            var i2 = document.createElement("div");
+            i2.className = "h-in";
+            i2.textContent = entry.text;
+            b.appendChild(d); b.appendChild(o); b.appendChild(i2);
+            b.addEventListener("click", function () {
+              openShow(entry);
+            });
+            historyList.appendChild(b);
+          });
+        }
+        clearBtn.addEventListener("click", function () {
+          saveHistory([]);
+          renderHistory();
+        });
+
+        // ---------- 表示画面 ----------
+        function fitFontSize(text) {
+          var len = text.length;
+          var px;
+          if (len <= 8) px = 72;
+          else if (len <= 16) px = 58;
+          else if (len <= 30) px = 46;
+          else if (len <= 60) px = 36;
+          else if (len <= 110) px = 29;
+          else px = 24;
+          // 画面幅が狭い場合は少し抑える
+          var w = Math.min(window.innerWidth, 640);
+          if (w < 380) px = Math.round(px * 0.85);
+          return px + "px";
+        }
+        function openShow(entry) {
+          showDir.textContent = langName(entry.from) + " → " + langName(entry.to);
+          showText.textContent = entry.translated;
+          showText.style.fontSize = fitFontSize(entry.translated);
+          showSrc.textContent = entry.text;
+          showView.classList.add("open");
+        }
+        function closeShow() {
+          showView.classList.remove("open");
+          input.focus();
+        }
+        showView.addEventListener("click", closeShow);
+
+        // ---------- 翻訳 ----------
+        function isQuota(data, translated) {
+          var st = String(data && data.responseStatus);
+          if (st === "403" || st === "429") return true;
+          if (translated) {
+            var t = translated.toUpperCase();
+            if (t.indexOf("MYMEMORY WARNING") !== -1) return true;
+            if (t.indexOf("USED ALL AVAILABLE FREE TRANSLATIONS") !== -1) return true;
+            if (t.indexOf("QUERY LENGTH LIMIT EXCEEDED") !== -1) return true;
+          }
+          return false;
+        }
+
+        // ---------- 訳文表示エリア・自動翻訳 ----------
+        var currentEntry = null;
+        var debounceTimer = null;
+        var requestSeq = 0;
+        var inFlightKey = "";  // 送信中のリクエスト（同じ内容の二重送信を防ぐ）
+        var lastShownKey = ""; // 表示済みの訳（同じ文の再翻訳を防ぐ）
+        var activeKey = "";
+
+        function fitInlineSize(text) {
+          var len = text.length;
+          var px;
+          if (len <= 8) px = 44;
+          else if (len <= 16) px = 38;
+          else if (len <= 30) px = 32;
+          else if (len <= 60) px = 26;
+          else if (len <= 110) px = 22;
+          else px = 20;
+          var w = Math.min(window.innerWidth, 640);
+          if (w < 380) px = Math.round(px * 0.9);
+          return px + "px";
+        }
+        function showPlaceholder() {
+          currentEntry = null;
+          resultText.textContent = "言葉を打つと、ここに訳が出ます";
+          resultText.classList.add("is-placeholder");
+          resultText.style.fontSize = "";
+          resultSub.textContent = uiStrings().resultPlaceholder;
+          resultArea.classList.remove("has-result");
+          resultHint.style.display = "none";
+          resultStatus.textContent = "";
+        }
+        function setTranslating(on) {
+          if (on) {
+            resultStatus.innerHTML = "";
+            var dot = document.createElement("span");
+            dot.className = "dot";
+            dot.setAttribute("aria-hidden", "true");
+            resultStatus.appendChild(dot);
+            resultStatus.appendChild(document.createTextNode("翻訳中 / " + uiStrings().translating));
+          } else {
+            resultStatus.textContent = "";
+          }
+          fallbackBtn.disabled = on;
+        }
+        function endRequest() {
+          inFlightKey = "";
+        }
+        function finishWith(entry) {
+          endRequest();
+          lastShownKey = activeKey;
+          currentEntry = entry;
+          resultText.textContent = entry.translated;
+          resultText.classList.remove("is-placeholder");
+          resultText.style.fontSize = fitInlineSize(entry.translated);
+          resultSub.textContent = "";
+          resultDir.textContent = langName(entry.from) + " → " + langName(entry.to);
+          resultArea.classList.add("has-result");
+          resultHint.style.display = "";
+          setTranslating(false);
+          addHistory(entry);
+        }
+        resultArea.addEventListener("click", function () {
+          if (currentEntry) openShow(currentEntry);
+        });
+        resultArea.addEventListener("keydown", function (e) {
+          if ((e.key === "Enter" || e.key === " ") && currentEntry) {
+            e.preventDefault();
+            openShow(currentEntry);
+          }
+        });
+
+        function currentTextAndPair() {
+          var text = input.value.trim();
+          if (text.length > MAX_LEN) text = text.slice(0, MAX_LEN);
+          return { text: text, c: langPairCodes() };
+        }
+
+        function scheduleTranslate() {
+          if (debounceTimer) clearTimeout(debounceTimer);
+          var t = currentTextAndPair();
+          if (!t.text) {
+            requestSeq++;
+            endRequest();
+            setTranslating(false);
+            hideStatus();
+            showPlaceholder();
+            return;
+          }
+          debounceTimer = setTimeout(function () {
+            doTranslate(false);
+          }, 800);
+        }
+
+        function doTranslate(forceFree) {
+          var t = currentTextAndPair();
+          if (!t.text) { showPlaceholder(); return; }
+          var apiKey = forceFree ? "" : getGeminiKey();
+          var key = (apiKey ? "g:" : "f:") + t.c[0] + ">" + t.c[1] + ":" + t.text;
+          if (key === inFlightKey) return; // 同じ内容を送信中なら二重に送らない
+          if (!forceFree && key === lastShownKey && currentEntry) return; // 表示済みの訳は再翻訳しない
+          hideStatus();
+          var mySeq = ++requestSeq;
+          inFlightKey = key;
+          activeKey = key;
+          setTranslating(true);
+          if (apiKey) {
+            translateWithGemini(t.text, t.c, apiKey, mySeq);
+          } else {
+            translateFree(t.text, t.c, mySeq);
+          }
+        }
+
+        // フリー版：まずGoogle翻訳の無料エンドポイントを使い、
+        // 失敗（通信エラー・形式不一致・訳文なし）したらMyMemoryへフォールバックする
+        function translateFree(text, c, seq) {
+          translateWithGoogle(text, c, seq, function () {
+            if (seq !== requestSeq) return;
+            translateWithMyMemory(text, c, seq);
+          });
+        }
+        function translateWithGoogle(text, c, seq, onFail) {
+          var url = "https://translate.googleapis.com/translate_a/single?client=gtx" +
+            "&sl=" + encodeURIComponent(c[0]) +
+            "&tl=" + encodeURIComponent(c[1]) +
+            "&dt=t&q=" + encodeURIComponent(text);
+
+          fetch(url)
+            .then(function (res) {
+              if (!res.ok) throw new Error("http " + res.status);
+              return res.json();
+            })
+            .then(function (data) {
+              if (seq !== requestSeq) return;
+              // 応答は [ [ [訳文, 原文, …], … ], … ] の形。訳文の断片を連結する
+              var translated = "";
+              if (data && Array.isArray(data[0])) {
+                for (var i = 0; i < data[0].length; i++) {
+                  var seg = data[0][i];
+                  if (seg && typeof seg[0] === "string") translated += seg[0];
+                }
+              }
+              translated = translated.trim();
+              if (!translated) {
+                onFail();
+                return;
+              }
+              finishWith({ from: c[0], to: c[1], text: text, translated: translated });
+            })
+            .catch(function () {
+              if (seq !== requestSeq) return;
+              onFail();
+            });
+        }
+
+        // フリー版フォールバック（MyMemory）
+        function translateWithMyMemory(text, c, seq) {
+          var url = "https://api.mymemory.translated.net/get?q=" +
+            encodeURIComponent(text) +
+            "&langpair=" + encodeURIComponent(c[0] + "|" + c[1]);
+
+          fetch(url)
+            .then(function (res) { return res.json(); })
+            .then(function (data) {
+              if (seq !== requestSeq) return;
+              var translated = data && data.responseData ? data.responseData.translatedText : "";
+              if (isQuota(data, translated)) {
+                endRequest();
+                setTranslating(false);
+                showStatus("今日は上限です。時間を置いてください。");
+                return;
+              }
+              if (!translated) {
+                endRequest();
+                setTranslating(false);
+                showStatus("翻訳できませんでした。もう一度お試しください。");
+                return;
+              }
+              finishWith({ from: c[0], to: c[1], text: text, translated: translated });
+            })
+            .catch(function () {
+              if (seq !== requestSeq) return;
+              endRequest();
+              setTranslating(false);
+              showStatus("翻訳できませんでした。通信の状態を確認してもう一度お試しください。");
+            });
+        }
+
+        // Gemini連携版
+        function geminiPrompt(text, from, to) {
+          var p = "あなたは翻訳者です。次の文章を" + langName(from) + "から" + langName(to) + "へ翻訳してください。\n" +
+            "教科書的でかたい表現ではなく、普段の話し言葉で自然に訳してください。";
+          if (to === "tl") {
+            p += "\nタガログ語は、英語が自然に混ざるタガリッシュ寄りの話し方でもかまいません。";
+          }
+          p += "\n出力は翻訳した文章だけにしてください。説明・注釈・引用符は付けないでください。\n\n文章:\n" + text;
+          return p;
+        }
+        function geminiError(seq) {
+          if (seq !== requestSeq) return;
+          endRequest();
+          // 黙ってフリー版へ切り替えず、正直に出してボタンで選んでもらう
+          setTranslating(false);
+          showStatus("Gemini連携でエラーが出ました。キーが無効か、上限に達している可能性があります。", true);
+        }
+        function translateWithGemini(text, c, apiKey, seq) {
+          fetch(GEMINI_URL, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "x-goog-api-key": apiKey
+            },
+            body: JSON.stringify({
+              contents: [{ parts: [{ text: geminiPrompt(text, c[0], c[1]) }] }]
+            })
+          })
+            .then(function (res) {
+              return res.json().then(function (data) {
+                return { ok: res.ok, data: data };
+              });
+            })
+            .then(function (r) {
+              if (seq !== requestSeq) return;
+              if (!r.ok || !r.data || r.data.error) {
+                geminiError(seq);
+                return;
+              }
+              var parts = r.data.candidates && r.data.candidates[0] &&
+                r.data.candidates[0].content && r.data.candidates[0].content.parts;
+              var translated = "";
+              if (parts) {
+                for (var i = 0; i < parts.length; i++) {
+                  if (parts[i].text) translated += parts[i].text;
+                }
+              }
+              translated = translated.trim();
+              if (!translated) {
+                geminiError(seq);
+                return;
+              }
+              finishWith({ from: c[0], to: c[1], text: text, translated: translated });
+            })
+            .catch(function () {
+              geminiError(seq);
+            });
+        }
+
+        // Geminiエラー時：利用者がボタンで選んだときだけフリー版で翻訳する
+        fallbackBtn.addEventListener("click", function () {
+          var t = currentTextAndPair();
+          if (!t.text) return;
+          if (debounceTimer) clearTimeout(debounceTimer);
+          doTranslate(true);
+        });
+
+        refreshDir();
+        refreshCounter();
+        renderHistory();
+        refreshGeminiUI();
+        showPlaceholder();
+      })();
+    </script>
+  </body>
+</html>
