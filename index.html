@@ -11,16 +11,17 @@
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700;900&display=swap" rel="stylesheet" />
     <style>
       :root {
-        --bg: #0a0c0f;
-        --panel: #151920;
-        --panel-2: #1d232d;
-        --line: #2a313d;
-        --text: #f4f6f9;
-        --sub: #b6bfcb;
-        --dim: #79838f;
-        --accent: #f0a51e;
-        --accent-text: #1a1200;
-        --danger: #ff8a7a;
+        /* 眩しさ対策：全体を一段暗くし、白は落とした灰色、黄色は彩度を抑えた暗めのアンバーにする */
+        --bg: #050607;
+        --panel: #0d0f12;
+        --panel-2: #12151a;
+        --line: #1e232a;
+        --text: #c3c8cf;
+        --sub: #8d959f;
+        --dim: #5d656f;
+        --accent: #b4831f;
+        --accent-text: #141002;
+        --danger: #cf7a6a;
       }
       * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
       html, body { height: 100%; }
@@ -44,7 +45,7 @@
       .input-view {
         max-width: 640px;
         margin: 0 auto;
-        padding: 0 18px 84px;
+        padding: 0 18px 40px;
         display: block;
         min-height: 100dvh;
       }
@@ -60,11 +61,49 @@
         flex-direction: column;
         gap: 8px;
         background: var(--bg);
-        margin: 0 -18px 14px;
-        padding: calc(14px + env(safe-area-inset-top, 0px)) 18px 10px;
+        margin: 0 -18px 12px;
+        padding: calc(10px + env(safe-area-inset-top, 0px)) 18px 8px;
         box-shadow: 0 12px 14px -12px rgba(0, 0, 0, 0.85);
       }
-      .top-meta {
+      /* 常時表示は方向ボタンと設定トグルだけの細い1行にする */
+      .toolbar-row {
+        display: flex;
+        align-items: stretch;
+        gap: 8px;
+      }
+      .settings-btn {
+        flex: none;
+        min-height: 48px;
+        padding: 6px 12px;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 14px;
+        font-weight: 700;
+        line-height: 1.3;
+        color: var(--sub);
+        background: var(--panel);
+        border: 2px solid var(--line);
+        border-radius: 12px;
+        white-space: nowrap;
+      }
+      .settings-btn .s-foreign {
+        display: block;
+        font-size: 11px;
+        font-weight: 500;
+        color: var(--dim);
+      }
+      .settings-btn .s-arrow { color: var(--dim); font-weight: 500; }
+      .settings-btn:active { background: var(--panel-2); }
+      /* プルダウン：普段は使わない部分（言語ペア表示・外国語切替・注意書き）を収納 */
+      .settings-panel {
+        display: none;
+        flex-direction: column;
+        gap: 10px;
+        padding: 4px 0 6px;
+      }
+      .settings-panel.open { display: flex; }
+      .settings-meta {
         display: flex;
         align-items: center;
         justify-content: space-between;
@@ -77,6 +116,13 @@
         color: var(--dim);
         line-height: 1.5;
       }
+      .settings-note {
+        margin: 0;
+        font-size: 12px;
+        line-height: 1.55;
+        color: var(--sub);
+      }
+      .settings-note .n-foreign { display: block; color: var(--dim); }
       .foreign-row {
         display: flex;
         align-items: center;
@@ -100,10 +146,11 @@
         background: var(--panel-2);
       }
       .dir-btn {
-        width: 100%;
-        min-height: 56px;
-        padding: 10px 12px;
-        font-size: 17px;
+        flex: 1;
+        min-width: 0;
+        min-height: 48px;
+        padding: 6px 10px;
+        font-size: 15px;
         line-height: 1.35;
         font-weight: 900;
         color: var(--text);
@@ -176,7 +223,7 @@
         border-radius: 18px;
         padding: 22px 18px 16px;
         margin-bottom: 14px;
-        min-height: 180px;
+        min-height: 210px;
         display: flex;
         flex-direction: column;
         align-items: center;
@@ -187,10 +234,10 @@
       }
       .result-area.has-result {
         cursor: pointer;
-        border-color: rgba(240, 165, 30, 0.45);
+        border-color: rgba(180, 131, 31, 0.32);
         background: var(--panel-2);
       }
-      .result-area.has-result:active { background: #232a35; }
+      .result-area.has-result:active { background: #171b21; }
       .result-dir {
         font-size: 12px;
         font-weight: 700;
@@ -254,9 +301,9 @@
         font-weight: 700;
         line-height: 1.6;
         border-radius: 12px;
-        background: #2e1a15;
-        color: #f3cdc4;
-        border: 1px solid #5c2f24;
+        background: #221310;
+        color: #c9a198;
+        border: 1px solid #40231b;
       }
       .status.show { display: block; }
 
@@ -431,20 +478,6 @@
       }
       .history-empty { font-size: 14px; color: var(--dim); padding: 6px 2px; line-height: 1.6; }
 
-      /* ---------- 注意書き ---------- */
-      .note {
-        position: fixed;
-        left: 0; right: 0; bottom: 0;
-        padding: 8px 14px calc(8px + env(safe-area-inset-bottom));
-        font-size: 12px;
-        line-height: 1.55;
-        color: var(--sub);
-        background: rgba(10, 12, 15, 0.94);
-        text-align: center;
-        z-index: 30;
-      }
-      .note .n-foreign { display: block; color: var(--dim); }
-
       /* ---------- 表示画面 ---------- */
       .show-view {
         position: fixed;
@@ -510,21 +543,30 @@
     <!-- 入力画面 -->
     <main class="input-view" id="inputView">
 
-      <!-- 一番上：操作ボタン -->
+      <!-- 一番上：常時表示は方向ボタン＋設定トグルだけ。普段使わない部分はプルダウンに収納 -->
       <div class="controls-top">
-        <div class="top-meta">
-          <span class="pair-indicator" id="pairIndicator">タガログ語 Tagalog ＋ 英語 English</span>
-          <span class="gemini-badge" id="geminiBadge">Gemini連携中</span>
+        <div class="toolbar-row">
+          <button class="dir-btn" id="dirBtn" type="button" aria-label="翻訳の方向を切り替える">
+            <span id="dirFrom">日本語 Japanese</span>
+            <span class="swap" aria-hidden="true">⇄</span>
+            <span id="dirTo">タガログ語 Tagalog</span>
+          </button>
+          <button class="settings-btn" id="settingsToggle" type="button" aria-expanded="false" aria-controls="settingsPanel">
+            <span>言語・設定<span class="s-foreign" id="settingsForeign"></span></span>
+            <span class="s-arrow" aria-hidden="true">▽</span>
+          </button>
         </div>
-        <div class="foreign-row" role="group" aria-label="外国語側の切替">
-          <button type="button" class="foreign-btn active" id="foreignLocalBtn" aria-pressed="true">タガログ語 Tagalog</button>
-          <button type="button" class="foreign-btn" id="foreignEnBtn" aria-pressed="false">英語 English</button>
+        <div class="settings-panel" id="settingsPanel">
+          <div class="settings-meta">
+            <span class="pair-indicator" id="pairIndicator">タガログ語 Tagalog ＋ 英語 English</span>
+            <span class="gemini-badge" id="geminiBadge">Gemini連携中</span>
+          </div>
+          <div class="foreign-row" role="group" aria-label="外国語側の切替">
+            <button type="button" class="foreign-btn active" id="foreignLocalBtn" aria-pressed="true">タガログ語 Tagalog</button>
+            <button type="button" class="foreign-btn" id="foreignEnBtn" aria-pressed="false">英語 English</button>
+          </div>
+          <p class="settings-note"><span>機械翻訳です。正確でないことがあります</span><span class="n-foreign" id="noteForeign"></span></p>
         </div>
-        <button class="dir-btn" id="dirBtn" type="button" aria-label="翻訳の方向を切り替える">
-          <span id="dirFrom">日本語 Japanese</span>
-          <span class="swap" aria-hidden="true">⇄</span>
-          <span id="dirTo">タガログ語 Tagalog</span>
-        </button>
       </div>
 
       <!-- 訳文表示エリア（タップで全画面表示） -->
@@ -590,8 +632,6 @@
       <div class="show-back"><span>タップで戻る</span><span class="b-foreign" id="showBackForeign"></span></div>
     </div>
 
-    <div class="note"><span>機械翻訳です。正確でないことがあります</span><span class="n-foreign" id="noteForeign"></span></div>
-
     <script>
       (function () {
         var LANGS = {
@@ -604,6 +644,7 @@
         // 説明文の外国語側（短く簡単な言葉）。表示は日本語との併記で、切替は現地語／英語切替に連動する。
         var STR = {
           tl: {
+            settings: "Mga setting",
             placeholder: "Mag-type dito",
             resultPlaceholder: "Mag-type, lalabas dito ang salin",
             tapLarge: "I-tap para lakihan",
@@ -621,6 +662,7 @@
             emptyHistory: "Wala pang kasaysayan."
           },
           id: {
+            settings: "Pengaturan",
             placeholder: "Ketik di sini",
             resultPlaceholder: "Ketik, terjemahan muncul di sini",
             tapLarge: "Ketuk untuk perbesar",
@@ -638,6 +680,7 @@
             emptyHistory: "Belum ada riwayat."
           },
           vi: {
+            settings: "Cài đặt",
             placeholder: "Nhập ở đây",
             resultPlaceholder: "Nhập chữ, bản dịch sẽ hiện ở đây",
             tapLarge: "Chạm để xem lớn",
@@ -655,6 +698,7 @@
             emptyHistory: "Chưa có lịch sử."
           },
           en: {
+            settings: "Settings",
             placeholder: "Type here",
             resultPlaceholder: "Type, and the translation appears here",
             tapLarge: "Tap to enlarge",
@@ -688,6 +732,9 @@
 
         var dirJaFirst = true; // true: 日本語→相手 / false: 相手→日本語
 
+        var settingsToggle = document.getElementById("settingsToggle");
+        var settingsPanel = document.getElementById("settingsPanel");
+        var settingsForeign = document.getElementById("settingsForeign");
         var pairIndicator = document.getElementById("pairIndicator");
         var foreignLocalBtn = document.getElementById("foreignLocalBtn");
         var foreignEnBtn = document.getElementById("foreignEnBtn");
@@ -737,6 +784,13 @@
         // 相手も読む場所なので、日本語名と相手側の表記を併記する。
         pairIndicator.textContent = LANGS[pair].name + " " + LANGS[pair].foreign + " ＋ " + LANGS.en.name + " " + LANGS.en.foreign;
 
+        // ---------- プルダウン（言語・設定） ----------
+        settingsToggle.addEventListener("click", function () {
+          var open = settingsPanel.classList.toggle("open");
+          settingsToggle.setAttribute("aria-expanded", open ? "true" : "false");
+          settingsToggle.querySelector(".s-arrow").textContent = open ? "△" : "▽";
+        });
+
         // 外国語側の切替（現地語 ⇄ 英語）。入力・表示の両方がこの切替に従う。
         function foreignCode() {
           return useEnglish ? "en" : pair;
@@ -747,6 +801,7 @@
         // 説明文の外国語側を、今の外国語（現地語／英語）に合わせて差し替える
         function refreshBilingual() {
           var s = uiStrings();
+          settingsForeign.textContent = s.settings;
           resultHintForeign.textContent = s.tapLarge;
           historyToggleForeign.textContent = " / " + s.history;
           historyNoteForeign.textContent = s.historyNote;
