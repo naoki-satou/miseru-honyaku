@@ -385,6 +385,91 @@
         font-family: inherit;
       }
       .gemini-key:focus { outline: none; border-color: var(--accent); }
+      /* キーを取りに行くボタン：AI Studioのキー作成ページへ直接飛ぶ */
+      .gemini-getkey {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        flex-wrap: wrap;
+        width: 100%;
+        min-height: 56px;
+        margin: 4px 0 12px;
+        padding: 10px 14px;
+        font-size: 17px;
+        font-weight: 900;
+        line-height: 1.35;
+        text-align: center;
+        color: var(--accent-text);
+        background: var(--accent);
+        border: none;
+        border-radius: 12px;
+        text-decoration: none;
+      }
+      .gemini-getkey:active { filter: brightness(0.92); }
+      .gemini-getkey .gk-foreign {
+        display: block;
+        width: 100%;
+        font-size: 12px;
+        font-weight: 700;
+        opacity: 0.75;
+      }
+      .gemini-steps {
+        margin: 0 0 6px;
+        padding: 0;
+        list-style: none;
+        counter-reset: gstep;
+      }
+      .gemini-steps li {
+        counter-increment: gstep;
+        display: flex;
+        gap: 10px;
+        align-items: flex-start;
+        font-size: 14px;
+        line-height: 1.6;
+        color: var(--sub);
+        padding: 5px 0;
+      }
+      .gemini-steps li::before {
+        content: counter(gstep);
+        flex: none;
+        width: 22px;
+        height: 22px;
+        margin-top: 1px;
+        border-radius: 50%;
+        background: var(--panel-2);
+        border: 1px solid var(--accent);
+        color: var(--accent);
+        font-size: 13px;
+        font-weight: 900;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      .gemini-steps li strong { color: var(--text); }
+      .gemini-steps .gs-foreign {
+        display: block;
+        font-size: 12px;
+        color: var(--dim);
+      }
+      .gemini-steps-note {
+        font-size: 12px;
+        line-height: 1.6;
+        color: var(--dim);
+        margin: 0 0 12px;
+      }
+      .gemini-steps-note .gsn-foreign { display: block; }
+      .gemini-paste {
+        flex: 1;
+        min-height: 48px;
+        font-size: 15px;
+        font-weight: 900;
+        color: var(--accent);
+        background: var(--panel-2);
+        border: 2px solid var(--accent);
+        border-radius: 10px;
+      }
+      .gemini-paste:active { filter: brightness(1.15); }
       .gemini-btns { display: flex; gap: 8px; margin-top: 10px; }
       .gemini-save {
         flex: 1;
@@ -604,15 +689,22 @@
         </section>
 
         <button class="fold-toggle" id="geminiToggle" type="button" aria-expanded="false">
-          <span>Gemini連携（任意）<span class="f-foreign" id="geminiToggleForeign"></span></span>
+          <span>Gemini連携（任意・キーは無料で取れます）<span class="f-foreign" id="geminiToggleForeign"></span></span>
           <span class="f-arrow" aria-hidden="true">▽</span>
         </button>
         <section class="fold-panel gemini-panel" id="geminiPanel" aria-label="Gemini連携">
           <p>自分のキーを入れると、<strong>普段の話し方に近い自然な訳</strong>になります。<span class="g-foreign" id="geminiDesc1Foreign"></span></p>
           <p>キーはこの端末の中にだけ保存されます。<span class="g-foreign" id="geminiDesc2Foreign"></span></p>
-          <p>キーはGoogle AI Studioで無料で取れます。<span class="g-foreign" id="geminiDesc3Foreign"></span></p>
-          <input class="gemini-key" id="geminiKey" type="password" placeholder="Gemini APIキー" autocomplete="off" autocapitalize="off" spellcheck="false" />
+          <a class="gemini-getkey" href="https://aistudio.google.com/apikey" target="_blank" rel="noopener noreferrer"><span>キーを取りに行く（無料）</span><span class="gk-foreign" id="geminiGetKeyForeign"></span></a>
+          <ol class="gemini-steps">
+            <li><span>下のボタンを押すと、Googleのページが開きます。<strong>Googleアカウントでログイン</strong>してください<span class="gs-foreign" id="geminiStep1Foreign"></span></span></li>
+            <li><span>ページの<strong>「Create API key（キーを作成）」</strong>を押して、出てきたキーを<strong>コピー</strong>します<span class="gs-foreign" id="geminiStep2Foreign"></span></span></li>
+            <li><span>このページに戻って、下の欄に<strong>貼るだけ</strong>。自動で保存されます<span class="gs-foreign" id="geminiStep3Foreign"></span></span></li>
+          </ol>
+          <p class="gemini-steps-note">初めての人は、ログイン後にプロジェクトとキーが自動で作られることがあります。そのときはキーをコピーするだけで大丈夫です。<span class="gsn-foreign" id="geminiStepsNoteForeign"></span></p>
+          <input class="gemini-key" id="geminiKey" type="password" placeholder="ここにキーを貼ってください" autocomplete="off" autocapitalize="off" spellcheck="false" />
           <div class="gemini-btns">
+            <button class="gemini-paste" id="geminiPaste" type="button">貼り付けて保存<span style="display:block;font-size:11px;font-weight:700" id="geminiPasteForeign"></span></button>
             <button class="gemini-save" id="geminiSave" type="button">保存する</button>
             <button class="gemini-delete" id="geminiDelete" type="button">削除する</button>
           </div>
@@ -656,6 +748,12 @@
             geminiDesc1: "Gamit ang iyong key, mas natural ang salin, parang normal na usapan.",
             geminiDesc2: "Sa device lang naka-save ang key.",
             geminiDesc3: "Libre ang key sa Google AI Studio.",
+            getKey: "Get a free key (Google AI Studio)",
+            step1: "Mag-sign in gamit ang Google account mo.",
+            step2: "Pindutin ang “Create API key”, tapos kopyahin ang key.",
+            step3: "Bumalik dito at i-paste lang. Awtomatikong mase-save.",
+            stepsNote: "Sa unang beses, minsan awtomatikong nagagawa ang project at key pagka-sign in. Kopyahin lang ang key.",
+            pasteSave: "Paste & save",
             original: "Orihinal",
             note: "Machine translation ito. Baka hindi tama.",
             translating: "Nagsasalin…",
@@ -674,6 +772,12 @@
             geminiDesc1: "Dengan kunci Anda, terjemahan lebih alami, seperti percakapan sehari-hari.",
             geminiDesc2: "Kunci hanya disimpan di perangkat ini.",
             geminiDesc3: "Kunci gratis di Google AI Studio.",
+            getKey: "Ambil kunci gratis (Google AI Studio)",
+            step1: "Masuk dengan akun Google Anda.",
+            step2: "Tekan “Create API key”, lalu salin kuncinya.",
+            step3: "Kembali ke sini dan tempel saja. Tersimpan otomatis.",
+            stepsNote: "Untuk pemula, proyek dan kunci kadang dibuat otomatis setelah masuk. Cukup salin kuncinya.",
+            pasteSave: "Tempel & simpan",
             original: "Teks asli",
             note: "Terjemahan mesin. Mungkin tidak tepat.",
             translating: "Menerjemahkan…",
@@ -692,6 +796,12 @@
             geminiDesc1: "Dùng khóa của bạn, bản dịch tự nhiên hơn, như nói chuyện hằng ngày.",
             geminiDesc2: "Khóa chỉ lưu trên máy này.",
             geminiDesc3: "Khóa miễn phí tại Google AI Studio.",
+            getKey: "Lấy khóa miễn phí (Google AI Studio)",
+            step1: "Đăng nhập bằng tài khoản Google.",
+            step2: "Nhấn “Create API key” rồi sao chép khóa.",
+            step3: "Quay lại đây và dán vào. Tự động lưu.",
+            stepsNote: "Lần đầu, dự án và khóa đôi khi được tạo tự động sau khi đăng nhập. Chỉ cần sao chép khóa.",
+            pasteSave: "Dán & lưu",
             original: "Văn bản gốc",
             note: "Dịch máy. Có thể không đúng.",
             translating: "Đang dịch…",
@@ -710,6 +820,12 @@
             geminiDesc1: "With your key, translations sound more natural, like everyday speech.",
             geminiDesc2: "The key is saved only on this device.",
             geminiDesc3: "Get a free key at Google AI Studio.",
+            getKey: "Get a free key (Google AI Studio)",
+            step1: "Sign in with your Google account.",
+            step2: "Press “Create API key” and copy the key.",
+            step3: "Come back here and just paste it. It saves automatically.",
+            stepsNote: "First time? A project and key may be created automatically after sign-in. Just copy the key.",
+            pasteSave: "Paste & save",
             original: "Original",
             note: "Machine translation. It may not be correct.",
             translating: "Translating…",
@@ -764,7 +880,13 @@
         var geminiToggleForeign = document.getElementById("geminiToggleForeign");
         var geminiDesc1Foreign = document.getElementById("geminiDesc1Foreign");
         var geminiDesc2Foreign = document.getElementById("geminiDesc2Foreign");
-        var geminiDesc3Foreign = document.getElementById("geminiDesc3Foreign");
+        var geminiGetKeyForeign = document.getElementById("geminiGetKeyForeign");
+        var geminiStep1Foreign = document.getElementById("geminiStep1Foreign");
+        var geminiStep2Foreign = document.getElementById("geminiStep2Foreign");
+        var geminiStep3Foreign = document.getElementById("geminiStep3Foreign");
+        var geminiStepsNoteForeign = document.getElementById("geminiStepsNoteForeign");
+        var geminiPaste = document.getElementById("geminiPaste");
+        var geminiPasteForeign = document.getElementById("geminiPasteForeign");
         var clearForeign = document.getElementById("clearForeign");
         var historyToggle = document.getElementById("historyToggle");
         var historyPanel = document.getElementById("historyPanel");
@@ -809,7 +931,12 @@
           geminiToggleForeign.textContent = " / " + s.gemini;
           geminiDesc1Foreign.textContent = s.geminiDesc1;
           geminiDesc2Foreign.textContent = s.geminiDesc2;
-          geminiDesc3Foreign.textContent = s.geminiDesc3;
+          geminiGetKeyForeign.textContent = s.getKey;
+          geminiStep1Foreign.textContent = s.step1;
+          geminiStep2Foreign.textContent = s.step2;
+          geminiStep3Foreign.textContent = s.step3;
+          geminiStepsNoteForeign.textContent = s.stepsNote;
+          geminiPasteForeign.textContent = s.pasteSave;
           showSrcLabelForeign.textContent = s.original;
           showBackForeign.textContent = s.tapBack;
           noteForeign.textContent = s.note;
@@ -926,25 +1053,58 @@
           geminiToggle.setAttribute("aria-expanded", open ? "true" : "false");
           geminiToggle.querySelector(".f-arrow").textContent = open ? "△" : "▽";
         });
-        geminiSave.addEventListener("click", function () {
-          var key = geminiKeyInput.value.trim();
+        function saveGeminiKey(key, auto) {
+          key = (key || "").trim();
           if (!key) {
             geminiMsg.textContent = "キーを入力してください。";
             geminiMsg.classList.add("show");
-            return;
+            return false;
           }
           try {
             localStorage.setItem(GEMINI_KEY_STORAGE, key);
           } catch (e) {
             geminiMsg.textContent = "保存できませんでした。";
             geminiMsg.classList.add("show");
-            return;
+            return false;
           }
           geminiKeyInput.value = "";
           refreshGeminiUI();
-          geminiMsg.textContent = "保存しました。連携中です。";
+          geminiMsg.textContent = auto ? "貼り付けたので、自動で保存しました。連携中です。" : "保存しました。連携中です。";
           geminiMsg.classList.add("show");
           if (typeof scheduleTranslate === "function") scheduleTranslate();
+          return true;
+        }
+        geminiSave.addEventListener("click", function () {
+          saveGeminiKey(geminiKeyInput.value, false);
+        });
+        // 貼り付けたら自動で保存する（ボタンを押す手間をなくす）。
+        // 短い文字列や途中入力では反応しないよう、キーらしい長さのときだけ。
+        geminiKeyInput.addEventListener("paste", function () {
+          setTimeout(function () {
+            var v = geminiKeyInput.value.trim();
+            if (v.length >= 20) saveGeminiKey(v, true);
+          }, 50);
+        });
+        // 「貼り付けて保存」：クリップボードから直接読んで保存する
+        geminiPaste.addEventListener("click", function () {
+          if (navigator.clipboard && navigator.clipboard.readText) {
+            navigator.clipboard.readText().then(function (text) {
+              if (text && text.trim().length >= 10) {
+                saveGeminiKey(text, true);
+              } else {
+                geminiMsg.textContent = "コピーしたキーが見つかりませんでした。先にキーをコピーしてください。";
+                geminiMsg.classList.add("show");
+              }
+            }).catch(function () {
+              geminiMsg.textContent = "貼り付けできませんでした。下の欄を長押しして貼ってください。貼れば自動で保存されます。";
+              geminiMsg.classList.add("show");
+              geminiKeyInput.focus();
+            });
+          } else {
+            geminiMsg.textContent = "下の欄を長押しして貼ってください。貼れば自動で保存されます。";
+            geminiMsg.classList.add("show");
+            geminiKeyInput.focus();
+          }
         });
         geminiDelete.addEventListener("click", function () {
           try {
