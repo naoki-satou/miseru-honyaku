@@ -897,7 +897,37 @@
         // 外国語側：false = 現地語（ペアの言語） / true = 英語
         var useEnglish = false;
 
-        var dirJaFirst = true; // true: 日本語→相手 / false: 相手→日本語
+        // 向きは [from, to] のコードペアで持つ。
+        // 現地語モードでは 日本語⇔現地語 の2つだけ、英語モードでは 日本語⇔英語 と 現地語⇔英語 の4つを順に回す。
+        // 最後に使った向き（と外国語トグル）は端末に覚えて、次に開いた時に復元する。
+        var DIR_KEY = "miseru-honyaku-dir";
+        function dirList() {
+          if (!useEnglish) return [["ja", pair], [pair, "ja"]];
+          return [["ja", "en"], ["en", "ja"], [pair, "en"], ["en", pair]];
+        }
+        function sameDir(a, b) { return !!a && !!b && a[0] === b[0] && a[1] === b[1]; }
+        function fixDirToList() {
+          var list = dirList();
+          for (var i = 0; i < list.length; i++) if (sameDir(list[i], dirPair)) return;
+          dirPair = list[0];
+        }
+        function saveDir() {
+          try { localStorage.setItem(DIR_KEY, JSON.stringify({ u: useEnglish, d: dirPair })); } catch (e) {}
+        }
+        var dirPair = ["ja", pair];
+        (function restoreDir() {
+          try {
+            var saved = JSON.parse(localStorage.getItem(DIR_KEY) || "null");
+            if (saved && typeof saved.u === "boolean" && saved.d) {
+              useEnglish = saved.u;
+              var list = dirList();
+              for (var i = 0; i < list.length; i++) {
+                if (sameDir(list[i], saved.d)) { dirPair = list[i]; return; }
+              }
+              dirPair = list[0];
+            }
+          } catch (e) {}
+        })();
 
         var settingsToggle = document.getElementById("settingsToggle");
         var settingsPanel = document.getElementById("settingsPanel");
@@ -1010,6 +1040,8 @@
         foreignLocalBtn.addEventListener("click", function () {
           if (!useEnglish) return;
           useEnglish = false;
+          fixDirToList();
+          saveDir();
           syncForeignToggle();
           refreshDir();
           scheduleTranslate();
@@ -1017,6 +1049,8 @@
         foreignEnBtn.addEventListener("click", function () {
           if (useEnglish) return;
           useEnglish = true;
+          fixDirToList();
+          saveDir();
           syncForeignToggle();
           refreshDir();
           scheduleTranslate();
@@ -1024,8 +1058,7 @@
         syncForeignToggle();
 
         function langPairCodes() {
-          var f = foreignCode();
-          return dirJaFirst ? ["ja", f] : [f, "ja"];
+          return [dirPair[0], dirPair[1]];
         }
         function langName(code) {
           return code === "ja" ? "日本語" : LANGS[code].name;
@@ -1040,14 +1073,19 @@
           dirTo.textContent = langNameBi(c[1]);
           resultDir.textContent = langName(c[0]) + " → " + langName(c[1]);
           // 入力欄の案内は日本語＋外国語の併記
-          input.placeholder = langName(c[0]) + "で入力してください / " + uiStrings().placeholder;
+          var phStrings = STR[c[0]] || uiStrings();
+          input.placeholder = langName(c[0]) + "で入力してください / " + phStrings.placeholder;
           // 入力欄の言語を入力側に合わせる（端末キーボードの変換・予測のため）
           input.setAttribute("lang", c[0]);
           refreshBilingual();
           renderHistory();
         }
         dirBtn.addEventListener("click", function () {
-          dirJaFirst = !dirJaFirst;
+          var list = dirList();
+          var idx = 0;
+          for (var i = 0; i < list.length; i++) if (sameDir(list[i], dirPair)) idx = i;
+          dirPair = list[(idx + 1) % list.length];
+          saveDir();
           refreshDir();
           scheduleTranslate();
         });
