@@ -1,7 +1,7 @@
 // 見せる翻訳 service worker
 // 画面の外側（HTML・アイコン等）だけをキャッシュし、開く速さとオフライン表示に使う。
 // 翻訳APIなど外部への通信はキャッシュしない。
-var CACHE_NAME = "miseru-honyaku-v5";
+var CACHE_NAME = "miseru-honyaku-v6";
 var SHELL = ["./", "index.html", "manifest.webmanifest", "icon-192.png", "icon-512.png", "apple-touch-icon.png"];
 
 self.addEventListener("install", function (event) {
