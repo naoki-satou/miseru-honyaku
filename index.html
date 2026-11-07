@@ -305,6 +305,13 @@
         letter-spacing: 0.06em;
       }
       .result-area.has-result .result-dir { color: var(--accent); }
+      .result-engine {
+        font-size: 12.5px;
+        font-weight: 700;
+        color: var(--sub);
+        margin-top: 2px;
+      }
+      .result-engine:empty { display: none; }
       .result-text {
         font-weight: 900;
         line-height: 1.4;
@@ -541,6 +548,16 @@
         border: none;
         border-radius: 10px;
       }
+      .gemini-test {
+        flex: 1;
+        min-height: 48px;
+        font-size: 15px;
+        font-weight: 700;
+        color: var(--text);
+        background: var(--panel-2);
+        border: 1px solid var(--line);
+        border-radius: 10px;
+      }
       .gemini-save:active { filter: brightness(0.92); }
       .gemini-delete {
         min-height: 48px;
@@ -717,6 +734,7 @@
       <!-- 訳文表示エリア（タップで全画面表示） -->
       <div class="result-area" id="resultArea" role="button" tabindex="0" aria-label="訳文。タップで大きく表示">
         <div class="result-dir" id="resultDir">日本語 → タガログ語</div>
+        <div class="result-engine" id="resultEngine"></div>
         <div class="result-text is-placeholder" id="resultText">言葉を打つと、ここに訳が出ます</div>
         <div class="result-romaji" id="resultRomaji"></div>
         <div class="result-sub" id="resultSub"></div>
@@ -760,14 +778,15 @@
           <a class="gemini-getkey" href="https://aistudio.google.com/apikey" target="_blank" rel="noopener noreferrer"><span>キーを取りに行く（無料）</span><span class="gk-foreign" id="geminiGetKeyForeign"></span></a>
           <ol class="gemini-steps">
             <li><span>下のボタンを押すと、Googleのページが開きます。<strong>Googleアカウントでログイン</strong>してください<span class="gs-foreign" id="geminiStep1Foreign"></span></span></li>
-            <li><span>ページの<strong>「Create API key（キーを作成）」</strong>を押して、出てきたキーを<strong>コピー</strong>します<span class="gs-foreign" id="geminiStep2Foreign"></span></span></li>
-            <li><span>このページに戻って、下の欄に<strong>貼るだけ</strong>。自動で保存されます<span class="gs-foreign" id="geminiStep3Foreign"></span></span></li>
+            <li><span>ページの上の<strong>「APIキーを作成」</strong>を押します。キーができたら、キーの横の<strong>コピーのマーク</strong>を押します<span class="gs-foreign" id="geminiStep2Foreign"></span></span></li>
+            <li><span>このページに戻って、<strong>「貼り付けて保存」</strong>を押すだけ。保存と同時に、キーが使えるか確かめます<span class="gs-foreign" id="geminiStep3Foreign"></span></span></li>
           </ol>
-          <p class="gemini-steps-note">初めての人は、ログイン後にプロジェクトとキーが自動で作られることがあります。そのときはキーをコピーするだけで大丈夫です。<span class="gsn-foreign" id="geminiStepsNoteForeign"></span></p>
+          <p class="gemini-steps-note">キーは無料です。キーが2つできてしまっても、使うのは1つで大丈夫です。分からなくなったら、最初からやり直せば大丈夫です。<span class="gsn-foreign" id="geminiStepsNoteForeign"></span></p>
           <input class="gemini-key" id="geminiKey" type="password" placeholder="ここにキーを貼ってください" autocomplete="off" autocapitalize="off" spellcheck="false" />
           <div class="gemini-btns">
             <button class="gemini-paste" id="geminiPaste" type="button">貼り付けて保存<span style="display:block;font-size:11px;font-weight:700" id="geminiPasteForeign"></span></button>
             <button class="gemini-save" id="geminiSave" type="button">保存する</button>
+            <button class="gemini-test" id="geminiTest" type="button" style="display:none">キーをテストする</button>
             <button class="gemini-delete" id="geminiDelete" type="button">削除する</button>
           </div>
           <div class="gemini-msg" id="geminiMsg"></div>
@@ -820,9 +839,9 @@
             geminiDesc3: "Libre ang key sa Google AI Studio.",
             getKey: "Get a free key (Google AI Studio)",
             step1: "Mag-sign in gamit ang Google account mo.",
-            step2: "Pindutin ang “Create API key”, tapos kopyahin ang key.",
-            step3: "Bumalik dito at i-paste lang. Awtomatikong mase-save.",
-            stepsNote: "Sa unang beses, minsan awtomatikong nagagawa ang project at key pagka-sign in. Kopyahin lang ang key.",
+            step2: "Pindutin ang “Create API key” sa taas. Pag lumabas ang key, pindutin ang copy icon sa tabi nito.",
+            step3: "Bumalik dito at pindutin ang “Paste & save”. Mase-save ito at mate-test agad kung gumagana ang key.",
+            stepsNote: "Libre ang key. Kahit dalawa ang magawa, isa lang ang gagamitin. Kung malito, ulitin lang mula sa simula.",
             pasteSave: "Paste & save",
             original: "Orihinal",
             note: "Machine translation ito. Baka hindi tama.",
@@ -846,9 +865,9 @@
             geminiDesc3: "Kunci gratis di Google AI Studio.",
             getKey: "Ambil kunci gratis (Google AI Studio)",
             step1: "Masuk dengan akun Google Anda.",
-            step2: "Tekan “Create API key”, lalu salin kuncinya.",
-            step3: "Kembali ke sini dan tempel saja. Tersimpan otomatis.",
-            stepsNote: "Untuk pemula, proyek dan kunci kadang dibuat otomatis setelah masuk. Cukup salin kuncinya.",
+            step2: "Tekan “Create API key” di atas. Setelah key dibuat, tekan ikon salin di sampingnya.",
+            step3: "Kembali ke sini dan tekan “Paste & save”. Key akan tersimpan dan langsung dites.",
+            stepsNote: "Key ini gratis. Kalau sampai jadi dua, cukup pakai satu saja. Kalau bingung, ulangi dari awal.",
             pasteSave: "Tempel & simpan",
             original: "Teks asli",
             note: "Terjemahan mesin. Mungkin tidak tepat.",
@@ -872,9 +891,9 @@
             geminiDesc3: "Khóa miễn phí tại Google AI Studio.",
             getKey: "Lấy khóa miễn phí (Google AI Studio)",
             step1: "Đăng nhập bằng tài khoản Google.",
-            step2: "Nhấn “Create API key” rồi sao chép khóa.",
-            step3: "Quay lại đây và dán vào. Tự động lưu.",
-            stepsNote: "Lần đầu, dự án và khóa đôi khi được tạo tự động sau khi đăng nhập. Chỉ cần sao chép khóa.",
+            step2: "Nhấn “Create API key” ở trên. Khi key được tạo, nhấn biểu tượng sao chép bên cạnh.",
+            step3: "Quay lại đây và nhấn “Paste & save”. Key sẽ được lưu và kiểm tra ngay.",
+            stepsNote: "Key miễn phí. Nếu lỡ tạo hai key, chỉ cần dùng một. Nếu rối, cứ làm lại từ đầu.",
             pasteSave: "Dán & lưu",
             original: "Văn bản gốc",
             note: "Dịch máy. Có thể không đúng.",
@@ -898,9 +917,9 @@
             geminiDesc3: "Get a free key at Google AI Studio.",
             getKey: "Get a free key (Google AI Studio)",
             step1: "Sign in with your Google account.",
-            step2: "Press “Create API key” and copy the key.",
-            step3: "Come back here and just paste it. It saves automatically.",
-            stepsNote: "First time? A project and key may be created automatically after sign-in. Just copy the key.",
+            step2: "Tap “Create API key” at the top. When the key appears, tap the copy icon next to it.",
+            step3: "Come back here and tap “Paste & save”. The key is saved and tested right away.",
+            stepsNote: "The key is free. If you end up with two keys, you only need one. If you get lost, just start over.",
             pasteSave: "Paste & save",
             original: "Original",
             note: "Machine translation. It may not be correct.",
@@ -980,6 +999,7 @@
         var resultDir = document.getElementById("resultDir");
         var resultText = document.getElementById("resultText");
         var resultRomaji = document.getElementById("resultRomaji");
+        var resultEngine = document.getElementById("resultEngine");
         var stateLabel = document.getElementById("stateLabel");
         var resultSub = document.getElementById("resultSub");
         var resultStatus = document.getElementById("resultStatus");
@@ -993,6 +1013,7 @@
         var geminiPanel = document.getElementById("geminiPanel");
         var geminiKeyInput = document.getElementById("geminiKey");
         var geminiSave = document.getElementById("geminiSave");
+        var geminiTest = document.getElementById("geminiTest");
         var geminiDelete = document.getElementById("geminiDelete");
         var geminiMsg = document.getElementById("geminiMsg");
         var geminiToggleForeign = document.getElementById("geminiToggleForeign");
@@ -1183,14 +1204,48 @@
           var has = !!getGeminiKey();
           geminiBadge.classList.toggle("show", has);
           geminiDelete.style.display = has ? "" : "none";
-          geminiMsg.textContent = has ? "連携中です。翻訳はGeminiで行います。" : "";
-          geminiMsg.classList.toggle("show", has);
+          geminiTest.style.display = has ? "" : "none";
+          geminiMsg.textContent = has ? "連携中です。翻訳はGeminiで行います。" : "キーは未設定です。いまは無料エンジンで訳しています（キーがなくても使えます）。";
+          geminiMsg.classList.add("show");
         }
         geminiToggle.addEventListener("click", function () {
           var open = geminiPanel.classList.toggle("open");
           geminiToggle.setAttribute("aria-expanded", open ? "true" : "false");
           geminiToggle.querySelector(".f-arrow").textContent = open ? "△" : "▽";
         });
+        // 保存したキーが本当に使えるか、その場で小さく試して、結果をはっきり言葉で出す
+        function testGeminiKey(key) {
+          geminiMsg.textContent = "キーを確かめています…";
+          geminiMsg.classList.add("show");
+          fetch(GEMINI_URL, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "x-goog-api-key": key
+            },
+            body: JSON.stringify({
+              contents: [{ parts: [{ text: "Translate 'こんにちは' into English. Reply with the translation only." }] }]
+            })
+          })
+            .then(function (res) {
+              return res.json().then(function (data) {
+                return { ok: res.ok, data: data };
+              });
+            })
+            .then(function (r) {
+              var parts = r.data && r.data.candidates && r.data.candidates[0] &&
+                r.data.candidates[0].content && r.data.candidates[0].content.parts;
+              var ok = !!(r.ok && parts && parts.length && parts[0].text);
+              geminiMsg.textContent = ok
+                ? "キー、使えています。これからはGeminiで訳します。"
+                : "キーが使えていませんでした。キーが途中で切れているか、違うキーのようです。もう一度コピーして貼ってください。";
+              geminiMsg.classList.add("show");
+            })
+            .catch(function () {
+              geminiMsg.textContent = "確かめられませんでした。電波の届く所で、もう一度テストしてください。";
+              geminiMsg.classList.add("show");
+            });
+        }
         function saveGeminiKey(key, auto) {
           key = (key || "").trim();
           if (!key) {
@@ -1207,8 +1262,7 @@
           }
           geminiKeyInput.value = "";
           refreshGeminiUI();
-          geminiMsg.textContent = auto ? "貼り付けたので、自動で保存しました。連携中です。" : "保存しました。連携中です。";
-          geminiMsg.classList.add("show");
+          testGeminiKey(key);
           if (typeof scheduleTranslate === "function") scheduleTranslate();
           return true;
         }
@@ -1243,6 +1297,10 @@
             geminiMsg.classList.add("show");
             geminiKeyInput.focus();
           }
+        });
+        geminiTest.addEventListener("click", function () {
+          var key = getGeminiKey();
+          if (key) testGeminiKey(key);
         });
         geminiDelete.addEventListener("click", function () {
           try {
@@ -1384,6 +1442,7 @@
         function showPlaceholder() {
           currentEntry = null;
           resultRomaji.textContent = "";
+          resultEngine.textContent = "";
           resultText.textContent = "言葉を打つと、ここに訳が出ます";
           resultText.classList.add("is-placeholder");
           resultText.style.fontSize = "";
@@ -1414,6 +1473,7 @@
           currentEntry = entry;
           resultText.textContent = entry.translated;
           resultRomaji.textContent = entry.romaji || "";
+          resultEngine.textContent = entry.engine === "gemini" ? "Geminiで翻訳しました" : "無料エンジンで翻訳しました";
           resultText.classList.remove("is-placeholder");
           resultText.style.fontSize = fitInlineSize(entry.translated);
           resultSub.textContent = "";
@@ -1512,7 +1572,7 @@
                 onFail();
                 return;
               }
-              finishWith({ from: c[0], to: c[1], text: text, translated: translated, romaji: c[1] === "ja" ? romaji.trim() : "" });
+              finishWith({ from: c[0], to: c[1], text: text, translated: translated, romaji: c[1] === "ja" ? romaji.trim() : "", engine: "google" });
             })
             .catch(function () {
               if (seq !== requestSeq) return;
@@ -1572,7 +1632,7 @@
                 showStatus("翻訳できませんでした。もう一度お試しください。");
                 return;
               }
-              finishWith({ from: c[0], to: c[1], text: text, translated: translated });
+              finishWith({ from: c[0], to: c[1], text: text, translated: translated, engine: "mymemory" });
             })
             .catch(function () {
               if (seq !== requestSeq) return;
@@ -1634,7 +1694,7 @@
                 geminiError(seq);
                 return;
               }
-              finishWith({ from: c[0], to: c[1], text: text, translated: translated });
+              finishWith({ from: c[0], to: c[1], text: text, translated: translated, engine: "gemini" });
             })
             .catch(function () {
               geminiError(seq);
