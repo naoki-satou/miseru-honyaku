@@ -4,7 +4,14 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <meta name="color-scheme" content="dark" />
-    <link rel="icon" href="data:," />
+    <link rel="icon" href="icon-192.png" />
+    <link rel="manifest" href="manifest.webmanifest" />
+    <meta name="theme-color" content="#050607" />
+    <link rel="apple-touch-icon" href="apple-touch-icon.png" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black" />
+    <meta name="apple-mobile-web-app-title" content="見せる翻訳" />
     <title>見せる翻訳（試作）</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -39,6 +46,27 @@
       }
       @media (prefers-reduced-motion: reduce) {
         *, *::before, *::after { animation: none !important; transition: none !important; }
+      }
+
+      /* ---------- ホーム画面追加（アプリ版）の案内 ---------- */
+      .app-hint {
+        margin-top: 28px;
+        padding: 14px 16px;
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        background: var(--panel);
+      }
+      .app-hint-main { margin: 0 0 6px; font-size: 14px; line-height: 1.6; }
+      .app-hint-how { margin: 0; font-size: 12px; line-height: 1.6; color: var(--sub); }
+      .app-install-btn {
+        margin-top: 10px;
+        padding: 10px 14px;
+        border-radius: 10px;
+        border: 1px solid var(--accent);
+        background: var(--accent);
+        color: var(--accent-text);
+        font-weight: 700;
+        font-size: 14px;
       }
 
       /* ---------- 入力画面 ---------- */
@@ -711,6 +739,13 @@
           <div class="gemini-msg" id="geminiMsg"></div>
         </section>
       </div>
+
+      <!-- ホーム画面に追加（アプリ版）の案内。常用する人向け。説明は両言語併記 -->
+      <section class="app-hint" id="appHint">
+        <p class="app-hint-main">よく使う人は、ホーム画面に追加すると、次からアイコンで開けます。<span class="gs-foreign" id="installForeign"></span></p>
+        <p class="app-hint-how">追加のしかた：ブラウザのメニュー（⋮）→「ホーム画面に追加」<span class="gs-foreign" id="installHowForeign"></span></p>
+        <button class="app-install-btn" id="installBtn" type="button" hidden>ホーム画面に追加する</button>
+      </section>
     </main>
 
     <!-- 表示画面 -->
@@ -756,6 +791,8 @@
             pasteSave: "Paste & save",
             original: "Orihinal",
             note: "Machine translation ito. Baka hindi tama.",
+            appHint: "Madalas gamitin? I-add sa Home screen, sa icon mo na bubuksan sa susunod.",
+            appHow: "Paano: menu (⋮) ng browser → Add to Home screen",
             translating: "Nagsasalin…",
             emptyHistory: "Wala pang kasaysayan."
           },
@@ -780,6 +817,8 @@
             pasteSave: "Tempel & simpan",
             original: "Teks asli",
             note: "Terjemahan mesin. Mungkin tidak tepat.",
+            appHint: "Sering dipakai? Tambahkan ke Layar utama, berikutnya buka dari ikon.",
+            appHow: "Caranya: menu (⋮) di browser → Tambahkan ke Layar utama",
             translating: "Menerjemahkan…",
             emptyHistory: "Belum ada riwayat."
           },
@@ -804,6 +843,8 @@
             pasteSave: "Dán & lưu",
             original: "Văn bản gốc",
             note: "Dịch máy. Có thể không đúng.",
+            appHint: "Hay dùng? Thêm vào Màn hình chính, lần sau mở bằng biểu tượng.",
+            appHow: "Cách thêm: menu (⋮) của trình duyệt → Thêm vào Màn hình chính",
             translating: "Đang dịch…",
             emptyHistory: "Chưa có lịch sử."
           },
@@ -828,6 +869,8 @@
             pasteSave: "Paste & save",
             original: "Original",
             note: "Machine translation. It may not be correct.",
+            appHint: "Use it often? Add it to your Home screen and open it from the icon next time.",
+            appHow: "How: browser menu (⋮) → Add to Home screen",
             translating: "Translating…",
             emptyHistory: "No history yet."
           }
@@ -838,10 +881,18 @@
         var MAX_LEN = 200;
         var HISTORY_MAX = 30;
 
-        // URLパラメータ ?pair=tl など（ペアの指定）。なければタガログ語＋英語ペア。
+        // URLパラメータ ?pair=tl など（ペアの指定）。パラメータがあればそれを使い、端末に覚える。
+        // パラメータが無い場合（ホーム画面のアイコンから開いた場合など）は、前回のペアを復元する。
+        // それも無ければタガログ語＋英語ペア。
         var params = new URLSearchParams(location.search);
         var pair = params.get("pair");
-        if (!pair || !LANGS[pair] || pair === "en" || pair === "ja") pair = "tl";
+        if (pair && LANGS[pair] && pair !== "en" && pair !== "ja") {
+          try { localStorage.setItem("miseru-honyaku-pair", pair); } catch (e) {}
+        } else {
+          var savedPair = null;
+          try { savedPair = localStorage.getItem("miseru-honyaku-pair"); } catch (e) {}
+          pair = savedPair && LANGS[savedPair] && savedPair !== "en" && savedPair !== "ja" ? savedPair : "tl";
+        }
 
         // 外国語側：false = 現地語（ペアの言語） / true = 英語
         var useEnglish = false;
@@ -901,6 +952,8 @@
         var showSrcLabelForeign = document.getElementById("showSrcLabelForeign");
         var showBackForeign = document.getElementById("showBackForeign");
         var noteForeign = document.getElementById("noteForeign");
+        var installForeign = document.getElementById("installForeign");
+        var installHowForeign = document.getElementById("installHowForeign");
 
         // ペアはURLパラメータだけで決まる。画面には今のペアを小さく表示するだけ（押しても切り替わらない）。
         // 相手も読む場所なので、日本語名と相手側の表記を併記する。
@@ -940,6 +993,8 @@
           showSrcLabelForeign.textContent = s.original;
           showBackForeign.textContent = s.tapBack;
           noteForeign.textContent = s.note;
+          if (installForeign) installForeign.textContent = s.appHint;
+          if (installHowForeign) installHowForeign.textContent = s.appHow;
           if (resultText.classList.contains("is-placeholder")) {
             resultSub.textContent = s.resultPlaceholder;
           }
@@ -1479,6 +1534,39 @@
         renderHistory();
         refreshGeminiUI();
         showPlaceholder();
+      })();
+    </script>
+
+    <!-- アプリ版（PWA）：service worker登録と、ホーム画面追加の補助 -->
+    <script>
+      if ("serviceWorker" in navigator) {
+        window.addEventListener("load", function () {
+          navigator.serviceWorker.register("sw.js").catch(function () {});
+        });
+      }
+      (function () {
+        var hint = document.getElementById("appHint");
+        var btn = document.getElementById("installBtn");
+        var standalone =
+          (window.matchMedia && window.matchMedia("(display-mode: standalone)").matches) ||
+          window.navigator.standalone === true;
+        if (standalone && hint) hint.style.display = "none";
+        var deferredPrompt = null;
+        window.addEventListener("beforeinstallprompt", function (e) {
+          e.preventDefault();
+          deferredPrompt = e;
+          if (btn && !standalone) btn.hidden = false;
+        });
+        if (btn) {
+          btn.addEventListener("click", function () {
+            if (!deferredPrompt) return;
+            deferredPrompt.prompt();
+            deferredPrompt.userChoice.then(function () {
+              deferredPrompt = null;
+              btn.hidden = true;
+            });
+          });
+        }
       })();
     </script>
   </body>
