@@ -199,6 +199,38 @@
       }
       .dir-btn:active { background: var(--panel); }
 
+      /* ---------- 今の状態表示（入力欄の上・薄くしない） ---------- */
+      .state-label {
+        margin: 0 2px 6px;
+        font-size: 15px;
+        font-weight: 700;
+        line-height: 1.5;
+        color: var(--text);
+      }
+      .state-label .st-foreign { color: var(--accent); }
+      textarea::placeholder { color: #9aa3ad; opacity: 1; }
+
+      /* ---------- 訳文のローマ字（日本語が訳文のとき） ---------- */
+      .result-romaji {
+        margin-top: 6px;
+        font-size: 15px;
+        line-height: 1.5;
+        color: var(--sub);
+        letter-spacing: .02em;
+        overflow-wrap: anywhere;
+      }
+      .result-romaji:empty { display: none; }
+      .show-romaji {
+        margin-top: 16px;
+        font-size: clamp(18px, 5vw, 26px);
+        line-height: 1.5;
+        color: #d9b45c;
+        text-align: center;
+        letter-spacing: .03em;
+        overflow-wrap: anywhere;
+      }
+      .show-romaji:empty { display: none; }
+
       /* ---------- 入力欄 ---------- */
       .field-wrap { position: relative; margin-bottom: 14px; }
       textarea {
@@ -686,11 +718,13 @@
       <div class="result-area" id="resultArea" role="button" tabindex="0" aria-label="訳文。タップで大きく表示">
         <div class="result-dir" id="resultDir">日本語 → タガログ語</div>
         <div class="result-text is-placeholder" id="resultText">言葉を打つと、ここに訳が出ます</div>
+        <div class="result-romaji" id="resultRomaji"></div>
         <div class="result-sub" id="resultSub"></div>
         <div class="result-status" id="resultStatus" aria-live="polite"></div>
         <div class="result-hint" id="resultHint" style="display:none"><span>タップで大きく表示</span><span class="h-foreign" id="resultHintForeign"></span></div>
       </div>
 
+      <p class="state-label" id="stateLabel"></p>
       <div class="field-wrap">
         <textarea id="input" maxlength="200" rows="4" lang="ja" autocapitalize="off" autocomplete="off" spellcheck="false" placeholder="ここに入力してください"></textarea>
         <button class="clear-input" id="clearInput" type="button" aria-label="入力を消す">×</button>
@@ -752,6 +786,7 @@
     <div class="show-view" id="showView" role="button" aria-label="タップで入力画面に戻る">
       <div class="show-dir" id="showDir"></div>
       <div class="show-text"><span id="showText"></span></div>
+      <div class="show-romaji" id="showRomaji"></div>
       <div class="show-src">
         <span class="src-label"><span>原文</span> / <span id="showSrcLabelForeign">Original</span></span>
         <span id="showSrc"></span>
@@ -944,6 +979,8 @@
         var resultArea = document.getElementById("resultArea");
         var resultDir = document.getElementById("resultDir");
         var resultText = document.getElementById("resultText");
+        var resultRomaji = document.getElementById("resultRomaji");
+        var stateLabel = document.getElementById("stateLabel");
         var resultSub = document.getElementById("resultSub");
         var resultStatus = document.getElementById("resultStatus");
         var resultHint = document.getElementById("resultHint");
@@ -978,6 +1015,7 @@
         var showView = document.getElementById("showView");
         var showDir = document.getElementById("showDir");
         var showText = document.getElementById("showText");
+        var showRomaji = document.getElementById("showRomaji");
         var showSrc = document.getElementById("showSrc");
         var showSrcLabelForeign = document.getElementById("showSrcLabelForeign");
         var showBackForeign = document.getElementById("showBackForeign");
@@ -1075,6 +1113,13 @@
           // 入力欄の案内は日本語＋外国語の併記
           var phStrings = STR[c[0]] || uiStrings();
           input.placeholder = langName(c[0]) + "で入力してください / " + phStrings.placeholder;
+          // 今の状態は、薄くなる入力欄の中ではなく、上の行にはっきり出す
+          stateLabel.textContent = "";
+          stateLabel.appendChild(document.createTextNode(langName(c[0]) + "で入力してください"));
+          var stF = document.createElement("span");
+          stF.className = "st-foreign";
+          stF.textContent = " / " + phStrings.placeholder;
+          stateLabel.appendChild(stF);
           // 入力欄の言語を入力側に合わせる（端末キーボードの変換・予測のため）
           input.setAttribute("lang", c[0]);
           refreshBilingual();
@@ -1291,6 +1336,7 @@
           showDir.textContent = langName(entry.from) + " → " + langName(entry.to);
           showText.textContent = entry.translated;
           showText.style.fontSize = fitFontSize(entry.translated);
+          showRomaji.textContent = entry.romaji || "";
           showSrc.textContent = entry.text;
           showView.classList.add("open");
         }
@@ -1336,6 +1382,7 @@
         }
         function showPlaceholder() {
           currentEntry = null;
+          resultRomaji.textContent = "";
           resultText.textContent = "言葉を打つと、ここに訳が出ます";
           resultText.classList.add("is-placeholder");
           resultText.style.fontSize = "";
@@ -1365,6 +1412,7 @@
           lastShownKey = activeKey;
           currentEntry = entry;
           resultText.textContent = entry.translated;
+          resultRomaji.textContent = entry.romaji || "";
           resultText.classList.remove("is-placeholder");
           resultText.style.fontSize = fitInlineSize(entry.translated);
           resultSub.textContent = "";
@@ -1437,7 +1485,7 @@
           var url = "https://translate.googleapis.com/translate_a/single?client=gtx" +
             "&sl=" + encodeURIComponent(c[0]) +
             "&tl=" + encodeURIComponent(c[1]) +
-            "&dt=t&q=" + encodeURIComponent(text);
+            "&dt=t&dt=rm&q=" + encodeURIComponent(text);
 
           fetch(url)
             .then(function (res) {
@@ -1447,11 +1495,14 @@
             .then(function (data) {
               if (seq !== requestSeq) return;
               // 応答は [ [ [訳文, 原文, …], … ], … ] の形。訳文の断片を連結する
+              // dt=rm を付けると、[null, null, ローマ字] の断片で訳文のローマ字読みも返る（日本語が訳文のとき用）
               var translated = "";
+              var romaji = "";
               if (data && Array.isArray(data[0])) {
                 for (var i = 0; i < data[0].length; i++) {
                   var seg = data[0][i];
                   if (seg && typeof seg[0] === "string") translated += seg[0];
+                  if (seg && seg[0] == null && typeof seg[2] === "string") romaji = seg[2];
                 }
               }
               translated = translated.trim();
@@ -1459,7 +1510,7 @@
                 onFail();
                 return;
               }
-              finishWith({ from: c[0], to: c[1], text: text, translated: translated });
+              finishWith({ from: c[0], to: c[1], text: text, translated: translated, romaji: c[1] === "ja" ? romaji.trim() : "" });
             })
             .catch(function () {
               if (seq !== requestSeq) return;
