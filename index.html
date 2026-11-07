@@ -1337,6 +1337,7 @@
           showText.textContent = entry.translated;
           showText.style.fontSize = fitFontSize(entry.translated);
           showRomaji.textContent = entry.romaji || "";
+          if (entry.to === "ja" && !entry.romaji) fetchRomaji(entry);
           showSrc.textContent = entry.text;
           showView.classList.add("open");
         }
@@ -1421,6 +1422,7 @@
           resultHint.style.display = "";
           setTranslating(false);
           addHistory(entry);
+          if (entry.to === "ja" && !entry.romaji) fetchRomaji(entry);
         }
         resultArea.addEventListener("click", function () {
           if (currentEntry) openShow(currentEntry);
@@ -1516,6 +1518,35 @@
               if (seq !== requestSeq) return;
               onFail();
             });
+        }
+
+        // 日本語の訳文にローマ字読みを付ける。どのエンジンの訳でも効くよう、読みだけを別に取る。
+        // Googleの応答には [null, null, null, ローマ字] の断片で原文（日本語）の読みが入る。
+        function fetchRomaji(entry) {
+          var url = "https://translate.googleapis.com/translate_a/single?client=gtx" +
+            "&sl=ja&tl=en&dt=t&dt=rm&q=" + encodeURIComponent(entry.translated);
+          fetch(url)
+            .then(function (res) {
+              if (!res.ok) throw new Error("http " + res.status);
+              return res.json();
+            })
+            .then(function (data) {
+              var romaji = "";
+              if (data && Array.isArray(data[0])) {
+                for (var i = 0; i < data[0].length; i++) {
+                  var seg = data[0][i];
+                  if (seg && seg[0] == null && typeof seg[3] === "string") romaji = seg[3];
+                }
+              }
+              romaji = romaji.trim();
+              if (!romaji) return;
+              entry.romaji = romaji;
+              if (currentEntry === entry) {
+                resultRomaji.textContent = romaji;
+                if (showView.classList.contains("open")) showRomaji.textContent = romaji;
+              }
+            })
+            .catch(function () {});
         }
 
         // フリー版フォールバック（MyMemory）
