@@ -820,8 +820,14 @@
           tl: { name: "タガログ語", foreign: "Tagalog" },
           id: { name: "インドネシア語", foreign: "Bahasa Indonesia" },
           vi: { name: "ベトナム語", foreign: "Tiếng Việt" },
+          ko: { name: "韓国語", foreign: "한국어" },
+          tw: { name: "台湾（繁体字）", foreign: "繁體中文" },
           en: { name: "英語", foreign: "English" }
         };
+        // 外部翻訳APIに渡す言語コード（台湾は繁体字のコードを使う）
+        function apiCode(code) {
+          return code === "tw" ? "zh-TW" : code;
+        }
         // 説明文の外国語側（短く簡単な言葉）。表示は日本語との併記で、切替は現地語／英語切替に連動する。
         var STR = {
           tl: {
@@ -901,6 +907,58 @@
             appHow: "Cách thêm: menu (⋮) của trình duyệt → Thêm vào Màn hình chính",
             translating: "Đang dịch…",
             emptyHistory: "Chưa có lịch sử."
+          },
+          ko: {
+            settings: "설정",
+            placeholder: "여기에 입력하세요",
+            resultPlaceholder: "입력하면 여기에 번역이 나와요",
+            tapLarge: "누르면 크게 보여요",
+            tapBack: "누르면 돌아가요",
+            history: "기록",
+            historyNote: "이 기기에만 저장돼요",
+            clearHistory: "지우기",
+            gemini: "Gemini (선택)",
+            geminiDesc1: "내 키를 쓰면 번역이 더 자연스러워요. 평소 말투처럼요.",
+            geminiDesc2: "키는 이 기기에만 저장돼요.",
+            geminiDesc3: "키는 Google AI Studio에서 무료로 받을 수 있어요.",
+            getKey: "무료 키 받기 (Google AI Studio)",
+            step1: "Google 계정으로 로그인하세요.",
+            step2: "위쪽의 “Create API key”를 누르세요. 키가 나오면 옆의 복사 아이콘을 누르세요.",
+            step3: "여기로 돌아와서 “붙여넣고 저장”을 누르세요. 저장되고 바로 테스트해요.",
+            stepsNote: "키는 무료예요. 프로젝트를 고르는 화면이 나와도 그냥 진행하면 돼요. 돈은 안 들어요. 두 개가 만들어져도 하나만 쓰면 돼요. 헷갈리면 처음부터 다시 하면 돼요.",
+            pasteSave: "붙여넣고 저장",
+            original: "원문",
+            note: "기계 번역이에요. 틀릴 수도 있어요.",
+            appHint: "자주 쓰나요? 홈 화면에 추가하면 다음부터 아이콘으로 열 수 있어요.",
+            appHow: "방법: 브라우저 메뉴(⋮) → 홈 화면에 추가",
+            translating: "번역 중…",
+            emptyHistory: "아직 기록이 없어요."
+          },
+          tw: {
+            settings: "設定",
+            placeholder: "在這裡輸入",
+            resultPlaceholder: "輸入後，翻譯會出現在這裡",
+            tapLarge: "點一下放大",
+            tapBack: "點一下返回",
+            history: "紀錄",
+            historyNote: "只保存在這台裝置",
+            clearHistory: "清除",
+            gemini: "Gemini（可選）",
+            geminiDesc1: "用你自己的金鑰，翻譯會更自然，像平常說話一樣。",
+            geminiDesc2: "金鑰只保存在這台裝置。",
+            geminiDesc3: "金鑰可在 Google AI Studio 免費取得。",
+            getKey: "取得免費金鑰（Google AI Studio）",
+            step1: "用 Google 帳號登入。",
+            step2: "按上方的「Create API key」。金鑰出現後，按旁邊的複製圖示。",
+            step3: "回到這裡，按「貼上並儲存」。儲存後會馬上測試。",
+            stepsNote: "金鑰是免費的。如果出現選擇專案的畫面，直接繼續就好，不會收費。就算做了兩個，用一個就好。如果弄混了，從頭再來一次就好。",
+            pasteSave: "貼上並儲存",
+            original: "原文",
+            note: "這是機器翻譯，可能不正確。",
+            appHint: "常用嗎？加到主畫面，下次點圖示就能開。",
+            appHow: "方法：瀏覽器選單（⋮）→ 加到主畫面",
+            translating: "翻譯中…",
+            emptyHistory: "還沒有紀錄。"
           },
           en: {
             settings: "Settings",
@@ -1142,7 +1200,7 @@
           stF.textContent = " / " + phStrings.placeholder;
           stateLabel.appendChild(stF);
           // 入力欄の言語を入力側に合わせる（端末キーボードの変換・予測のため）
-          input.setAttribute("lang", c[0]);
+          input.setAttribute("lang", apiCode(c[0]));
           refreshBilingual();
           renderHistory();
         }
@@ -1545,8 +1603,8 @@
         }
         function translateWithGoogle(text, c, seq, onFail) {
           var url = "https://translate.googleapis.com/translate_a/single?client=gtx" +
-            "&sl=" + encodeURIComponent(c[0]) +
-            "&tl=" + encodeURIComponent(c[1]) +
+            "&sl=" + encodeURIComponent(apiCode(c[0])) +
+            "&tl=" + encodeURIComponent(apiCode(c[1])) +
             "&dt=t&dt=rm&q=" + encodeURIComponent(text);
 
           fetch(url)
@@ -1613,7 +1671,7 @@
         function translateWithMyMemory(text, c, seq) {
           var url = "https://api.mymemory.translated.net/get?q=" +
             encodeURIComponent(text) +
-            "&langpair=" + encodeURIComponent(c[0] + "|" + c[1]);
+            "&langpair=" + encodeURIComponent(apiCode(c[0]) + "|" + apiCode(c[1]));
 
           fetch(url)
             .then(function (res) { return res.json(); })
@@ -1648,6 +1706,9 @@
             "教科書的でかたい表現ではなく、普段の話し言葉で自然に訳してください。";
           if (to === "tl") {
             p += "\nタガログ語は、英語が自然に混ざるタガリッシュ寄りの話し方でもかまいません。";
+          }
+          if (to === "tw") {
+            p += "\n台湾で使われる繁体字で訳してください。簡体字は使わないでください。";
           }
           p += "\n出力は翻訳した文章だけにしてください。説明・注釈・引用符は付けないでください。\n\n文章:\n" + text;
           return p;
