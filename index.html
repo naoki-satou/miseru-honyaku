@@ -1006,6 +1006,14 @@
           pair = savedPair && LANGS[savedPair] && savedPair !== "en" && savedPair !== "ja" ? savedPair : "tl";
         }
 
+        // ホーム画面アイコンから開いた時にペアが引き継がれるよう、マニフェストをペア専用のもの
+        // （start_url に ?pair= を含む）に差し替える。iOSではアイコン起動側とブラウザ側で
+        // localStorage が別容器のため、上の復元だけでは足りない。
+        try {
+          var manifestLink = document.querySelector('link[rel="manifest"]');
+          if (manifestLink) manifestLink.setAttribute("href", "manifest-" + pair + ".webmanifest");
+        } catch (e) {}
+
         // 外国語側：false = 現地語（ペアの言語） / true = 英語
         var useEnglish = false;
 
